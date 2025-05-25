@@ -74,7 +74,6 @@ function App() {
           <Route path="/admin/tutors" element={<AdminLayout><TutorsList /></AdminLayout>} />
           <Route path="/admin/tutors/new" element={<AdminLayout><TutorForm /></AdminLayout>} />
           <Route path="/admin/tutors/edit/:id" element={<AdminLayout><TutorForm /></AdminLayout>} />
-          <Route path="/admin/locations" element={<AdminLayout><div>Locations Management (Coming Soon)</div></AdminLayout>} />
           <Route path="/admin/bookings" element={<AdminLayout><BookingsList /></AdminLayout>} />
           <Route path="/admin/bookings/new" element={<AdminLayout><BookingForm /></AdminLayout>} />
           <Route path="/admin/bookings/:id" element={<AdminLayout><BookingForm /></AdminLayout>} />

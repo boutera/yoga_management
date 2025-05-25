@@ -20,7 +20,6 @@ import {
   Dashboard as DashboardIcon,
   Class as ClassIcon,
   People as PeopleIcon,
-  LocationOn as LocationIcon,
   EventNote as EventIcon,
   Assessment as AssessmentIcon,
   ChevronLeft as ChevronLeftIcon,
@@ -33,7 +32,6 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
   { text: 'Classes', icon: <ClassIcon />, path: '/admin/classes' },
   { text: 'Tutors', icon: <PeopleIcon />, path: '/admin/tutors' },
-  { text: 'Locations', icon: <LocationIcon />, path: '/admin/locations' },
   { text: 'Bookings', icon: <EventIcon />, path: '/admin/bookings' },
   { text: 'Reports', icon: <AssessmentIcon />, path: '/admin/reports' },
 ];
