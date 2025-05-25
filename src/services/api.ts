@@ -111,8 +111,24 @@ export const classAPI = {
 export const locationAPI = {
   getAll: () => api.get('/locations').then(response => response.data),
   getById: (id: string) => api.get(`/locations/${id}`).then(response => response.data),
-  create: (data: any) => api.post('/locations', data).then(response => response.data),
-  update: (id: string, data: any) => api.put(`/locations/${id}`, data).then(response => response.data),
+  create: (data: any) => {
+    console.log('Creating location with data:', data);
+    return api.post('/locations', data)
+      .then(response => response.data)
+      .catch(error => {
+        console.error('Location creation error:', error.response?.data || error);
+        throw error;
+      });
+  },
+  update: (id: string, data: any) => {
+    console.log('Updating location with data:', data);
+    return api.put(`/locations/${id}`, data)
+      .then(response => response.data)
+      .catch(error => {
+        console.error('Location update error:', error.response?.data || error);
+        throw error;
+      });
+  },
   delete: (id: string) => api.delete(`/locations/${id}`).then(response => response.data),
   getByCity: (city: string) => api.get(`/locations/city/${city}`).then(response => response.data),
 };

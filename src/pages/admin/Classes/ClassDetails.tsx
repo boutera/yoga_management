@@ -25,12 +25,7 @@ interface Class {
   location: {
     _id: string;
     name: string;
-    address: {
-      street: string;
-      city: string;
-      state: string;
-      zipCode: string;
-    };
+    address: string;
   };
   capacity: number;
   price: number;
@@ -177,7 +172,7 @@ const ClassDetails = () => {
               {classData.location.name}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {classData.location.address.street}, {classData.location.address.city}, {classData.location.address.state} {classData.location.address.zipCode}
+              {classData.location.address}
             </Typography>
           </Grid>
 

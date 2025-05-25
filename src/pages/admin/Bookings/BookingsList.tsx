@@ -365,9 +365,6 @@ const BookingsList = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">{booking.class.location?.name}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {`${booking.class.location?.address?.city}, ${booking.class.location?.address?.state}`}
-                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2">

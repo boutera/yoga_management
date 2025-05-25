@@ -4,32 +4,13 @@ const { validationResult } = require('express-validator');
 // Get all locations with optional filters
 exports.getLocations = async (req, res) => {
   try {
-    const {
-      status,
-      city,
-      search
-    } = req.query;
-
-    // Build filter object
-    const filter = {};
-    if (status) filter.status = status;
-    if (city) filter['address.city'] = { $regex: city, $options: 'i' };
-    if (search) {
-      filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
-        { 'address.street': { $regex: search, $options: 'i' } }
-      ];
-    }
-
-    const locations = await Location.find(filter)
-      .sort({ createdAt: -1 });
-
+    const locations = await Location.find().sort({ createdAt: -1 });
     res.json({
       success: true,
       data: locations
     });
   } catch (error) {
+    console.error('Error fetching locations:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching locations',
@@ -42,19 +23,18 @@ exports.getLocations = async (req, res) => {
 exports.getLocationById = async (req, res) => {
   try {
     const location = await Location.findById(req.params.id);
-
     if (!location) {
       return res.status(404).json({
         success: false,
         message: 'Location not found'
       });
     }
-
     res.json({
       success: true,
       data: location
     });
   } catch (error) {
+    console.error('Error fetching location:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching location',
@@ -68,20 +48,24 @@ exports.createLocation = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
       });
     }
 
+    console.log('Creating location with data:', req.body);
     const location = new Location(req.body);
     await location.save();
+    console.log('Location created successfully:', location);
 
     res.status(201).json({
       success: true,
       data: location
     });
   } catch (error) {
+    console.error('Error creating location:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating location',
@@ -95,12 +79,14 @@ exports.updateLocation = async (req, res) => {
   try {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.error('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
       });
     }
 
+    console.log('Updating location with data:', req.body);
     const location = await Location.findByIdAndUpdate(
       req.params.id,
       req.body,
@@ -114,11 +100,13 @@ exports.updateLocation = async (req, res) => {
       });
     }
 
+    console.log('Location updated successfully:', location);
     res.json({
       success: true,
       data: location
     });
   } catch (error) {
+    console.error('Error updating location:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating location',
@@ -131,19 +119,18 @@ exports.updateLocation = async (req, res) => {
 exports.deleteLocation = async (req, res) => {
   try {
     const location = await Location.findByIdAndDelete(req.params.id);
-
     if (!location) {
       return res.status(404).json({
         success: false,
         message: 'Location not found'
       });
     }
-
     res.json({
       success: true,
       message: 'Location deleted successfully'
     });
   } catch (error) {
+    console.error('Error deleting location:', error);
     res.status(500).json({
       success: false,
       message: 'Error deleting location',

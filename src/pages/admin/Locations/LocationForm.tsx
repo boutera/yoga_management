@@ -7,86 +7,126 @@ import {
   Grid,
   TextField,
   Typography,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
+import { locationAPI } from '../../../services/api.ts';
 
-// Mock data - replace with actual API calls later
-const mockLocations = [
-  {
-    id: '1',
-    name: 'Downtown Studio',
-    address: '123 Main St, Downtown',
-    capacity: 50,
-    contactPhone: '(555) 123-4567',
-    contactEmail: 'downtown@yogacenter.com',
-  },
-  {
-    id: '2',
-    name: 'Westside Center',
-    address: '456 West Ave, Westside',
-    capacity: 40,
-    contactPhone: '(555) 234-5678',
-    contactEmail: 'westside@yogacenter.com',
-  },
-  {
-    id: '3',
-    name: 'Eastside Hub',
-    address: '789 East Blvd, Eastside',
-    capacity: 35,
-    contactPhone: '(555) 345-6789',
-    contactEmail: 'eastside@yogacenter.com',
-  },
-];
+interface LocationFormData {
+  name: string;
+  address: string;
+  capacity: number;
+  contactPhone: string;
+  contactEmail: string;
+  status: 'active' | 'inactive';
+}
 
 const LocationForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
 
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<LocationFormData>({
     name: '',
     address: '',
-    capacity: '',
+    capacity: 0,
     contactPhone: '',
     contactEmail: '',
+    status: 'active',
   });
 
   useEffect(() => {
-    if (isEditMode) {
-      // In a real app, this would be an API call
-      const location = mockLocations.find((loc) => loc.id === id);
-      if (location) {
-        setFormData({
-          name: location.name,
-          address: location.address,
-          capacity: location.capacity.toString(),
-          contactPhone: location.contactPhone,
-          contactEmail: location.contactEmail,
-        });
-      }
+    if (isEditMode && id) {
+      fetchLocation(id);
     }
   }, [id, isEditMode]);
 
+  const fetchLocation = async (locationId: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await locationAPI.getById(locationId);
+      console.log('Fetched location:', response);
+      if (response.success) {
+        setFormData(response.data);
+      } else {
+        setError('Failed to fetch location details');
+      }
+    } catch (err) {
+      console.error('Error fetching location:', err);
+      setError('Failed to fetch location details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: name === 'capacity' ? Number(value) : value
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would be an API call
-    console.log('Form submitted:', formData);
-    navigate('/admin/locations');
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (isEditMode && id) {
+        const response = await locationAPI.update(id, formData);
+        if (!response.success) {
+          setError(response.message || 'Failed to update location');
+          return;
+        }
+      } else {
+        const response = await locationAPI.create(formData);
+        if (!response.success) {
+          setError(response.message || 'Failed to create location');
+          return;
+        }
+      }
+      
+      navigate('/admin/locations');
+    } catch (err: any) {
+      if (err.response?.data?.errors) {
+        // Handle validation errors
+        const errorMessages = err.response.data.errors.map((error: any) => error.msg).join(', ');
+        setError(errorMessages);
+      } else if (err.response?.data?.message) {
+        // Handle other error messages
+        setError(err.response.data.message);
+      } else {
+        setError('Failed to save location. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading && isEditMode) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
         {isEditMode ? 'Edit Location' : 'Add New Location'}
       </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Card>
         <CardContent>
@@ -100,8 +140,10 @@ const LocationForm = () => {
                   value={formData.name}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -110,8 +152,10 @@ const LocationForm = () => {
                   value={formData.address}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </Grid>
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -121,8 +165,11 @@ const LocationForm = () => {
                   value={formData.capacity}
                   onChange={handleChange}
                   required
+                  inputProps={{ min: 1 }}
+                  disabled={loading}
                 />
               </Grid>
+
               <Grid item xs={12} sm={6}>
                 <TextField
                   fullWidth
@@ -131,8 +178,10 @@ const LocationForm = () => {
                   value={formData.contactPhone}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <TextField
                   fullWidth
@@ -142,19 +191,23 @@ const LocationForm = () => {
                   value={formData.contactEmail}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </Grid>
+
               <Grid item xs={12}>
                 <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
                   <Button
                     variant="outlined"
                     onClick={() => navigate('/admin/locations')}
+                    disabled={loading}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="submit"
                     variant="contained"
+                    disabled={loading}
                   >
                     {isEditMode ? 'Save Changes' : 'Add Location'}
                   </Button>
