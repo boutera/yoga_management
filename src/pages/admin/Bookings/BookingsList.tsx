@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  CircularProgress,
   Avatar,
   MenuItem,
   Select,
@@ -37,61 +38,54 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
+import { bookingAPI } from '../../../services/api.ts';
 
-// Mock data - replace with actual API calls later
-const mockBookings = [
-  {
-    id: '1',
-    classId: '1',
-    className: 'Hatha Yoga',
-    tutorId: '1',
-    tutorName: 'Sarah Johnson',
-    tutorAvatar: 'https://i.pravatar.cc/150?img=1',
-    locationId: '1',
-    locationName: 'Downtown Studio',
-    date: '2024-03-20',
-    startTime: '09:00',
-    endTime: '10:00',
-    capacity: 20,
-    bookedSeats: 15,
-    status: 'confirmed',
-    price: 25.00,
-  },
-  {
-    id: '2',
-    classId: '2',
-    className: 'Meditation',
-    tutorId: '2',
-    tutorName: 'Michael Chen',
-    tutorAvatar: 'https://i.pravatar.cc/150?img=2',
-    locationId: '2',
-    locationName: 'Westside Center',
-    date: '2024-03-20',
-    startTime: '14:00',
-    endTime: '14:45',
-    capacity: 15,
-    bookedSeats: 8,
-    status: 'confirmed',
-    price: 20.00,
-  },
-  {
-    id: '3',
-    classId: '3',
-    className: 'Healing Therapy',
-    tutorId: '3',
-    tutorName: 'Emma Williams',
-    tutorAvatar: 'https://i.pravatar.cc/150?img=3',
-    locationId: '1',
-    locationName: 'Downtown Studio',
-    date: '2024-03-21',
-    startTime: '16:00',
-    endTime: '17:30',
-    capacity: 10,
-    bookedSeats: 3,
-    status: 'pending',
-    price: 50.00,
-  },
-];
+interface Booking {
+  _id: string;
+  user: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  class: {
+    _id: string;
+    name: string;
+    description: string;
+    duration: number;
+    price: number;
+    tutor: {
+      _id: string;
+      name: string;
+      email: string;
+    };
+    location: {
+      _id: string;
+      name: string;
+      address: {
+        street: string;
+        city: string;
+        state: string;
+        zipCode: string;
+      };
+    };
+  };
+  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show';
+  bookingDate: string;
+  paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
+  paymentAmount: number;
+  paymentMethod: 'cash' | 'credit_card' | 'debit_card' | 'online_transfer';
+  paymentDetails?: {
+    transactionId?: string;
+    paymentDate?: string;
+    refundDate?: string;
+    refundAmount?: number;
+  };
+  attendanceStatus: 'not_checked' | 'present' | 'absent';
+  notes?: string;
+  cancellationReason?: string;
+  cancellationDate?: string;
+  refundAmount?: number;
+}
 
 const statusColors: Record<string, 'success' | 'warning' | 'error' | 'info'> = {
   confirmed: 'success',
@@ -107,10 +101,34 @@ const BookingsList = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState<typeof mockBookings[0] | null>(null);
-  const [bookings, setBookings] = useState(mockBookings);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await bookingAPI.getAll();
+      if (response.success) {
+        setBookings(response.data);
+      } else {
+        setError('Failed to fetch bookings');
+      }
+    } catch (err) {
+      setError('An error occurred while fetching bookings');
+      console.error('Error fetching bookings:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -131,47 +149,122 @@ const BookingsList = () => {
     setPage(0);
   };
 
-  const handleDeleteClick = (booking: typeof mockBookings[0]) => {
+  const handleDeleteClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // TODO: Implement delete functionality
-    console.log('Deleting booking:', selectedBooking?.id);
-    setDeleteDialogOpen(false);
-    setSelectedBooking(null);
+  const handleDeleteConfirm = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      const response = await bookingAPI.delete(selectedBooking._id);
+      if (response.success) {
+        setBookings(bookings.filter(b => b._id !== selectedBooking._id));
+        setDeleteDialogOpen(false);
+        setSelectedBooking(null);
+      } else {
+        setError('Failed to delete booking');
+      }
+    } catch (err) {
+      setError('An error occurred while deleting the booking');
+      console.error('Error deleting booking:', err);
+    }
   };
 
-  const handleApprove = (bookingId: string) => {
-    setBookings((prev) => prev.map(b => b.id === bookingId ? { ...b, status: 'confirmed' } : b));
+  const handleApprove = async (bookingId: string) => {
+    try {
+      const response = await bookingAPI.update(bookingId, { status: 'confirmed' });
+      if (response.success) {
+        setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'confirmed' } : b));
+      } else {
+        setError('Failed to approve booking');
+      }
+    } catch (err) {
+      setError('An error occurred while approving the booking');
+      console.error('Error approving booking:', err);
+    }
   };
 
-  const handleRejectClick = (booking: typeof mockBookings[0]) => {
+  const handleRejectClick = (booking: Booking) => {
     setSelectedBooking(booking);
     setRejectionReason('');
     setRejectDialogOpen(true);
   };
 
-  const handleRejectConfirm = () => {
-    if (selectedBooking) {
-      setBookings((prev) => prev.map(b => b.id === selectedBooking.id ? { ...b, status: 'rejected', rejectionReason } : b));
+  const handleRejectConfirm = async () => {
+    if (!selectedBooking) return;
+
+    try {
+      const response = await bookingAPI.update(selectedBooking._id, { 
+        status: 'cancelled',
+        cancellationReason: rejectionReason,
+        cancellationDate: new Date().toISOString()
+      });
+      if (response.success) {
+        setBookings(prev => prev.map(b => b._id === selectedBooking._id ? { 
+          ...b, 
+          status: 'cancelled',
+          cancellationReason: rejectionReason,
+          cancellationDate: new Date().toISOString()
+        } : b));
+        setRejectDialogOpen(false);
+        setSelectedBooking(null);
+        setRejectionReason('');
+      } else {
+        setError('Failed to reject booking');
+      }
+    } catch (err) {
+      setError('An error occurred while rejecting the booking');
+      console.error('Error rejecting booking:', err);
     }
-    setRejectDialogOpen(false);
-    setSelectedBooking(null);
-    setRejectionReason('');
   };
 
-  const filteredBookings = mockBookings.filter((booking) => {
+  const getStatusColor = (status: Booking['status']) => {
+    switch (status) {
+      case 'pending':
+        return 'warning';
+      case 'confirmed':
+        return 'info';
+      case 'completed':
+        return 'success';
+      case 'cancelled':
+      case 'no-show':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
+  const filteredBookings = bookings.filter((booking) => {
     const matchesSearch = 
-      booking.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.tutorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.locationName.toLowerCase().includes(searchQuery.toLowerCase());
+      booking.class?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.class?.tutor?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.class?.location?.name?.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || booking.status === statusFilter;
     
     return matchesSearch && matchesStatus;
   });
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Typography color="error">{error}</Typography>
+        <Button onClick={fetchBookings} sx={{ mt: 2 }}>
+          Retry
+        </Button>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -237,100 +330,122 @@ const BookingsList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredBookings
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((booking) => (
-                <TableRow key={booking.id}>
-                  <TableCell>
-                    <Typography variant="subtitle2">{booking.className}</Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <Avatar src={booking.tutorAvatar} alt={booking.tutorName} sx={{ width: 32, height: 32 }} />
-                      <Typography variant="body2">{booking.tutorName}</Typography>
-                    </Box>
-                  </TableCell>
-                  <TableCell>{booking.locationName}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                      <CalendarIcon fontSize="small" color="action" />
-                      <Box>
+            {filteredBookings.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  <Typography variant="body1">No bookings found</Typography>
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredBookings
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((booking) => (
+                  <TableRow key={booking._id}>
+                    <TableCell>
+                      <Typography variant="subtitle2">
+                        {booking.class?.name || 'Unnamed Class'}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {booking.class?.duration ? `${booking.class.duration} minutes` : 'Duration not set'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar 
+                          src={booking.class.tutor?.profilePicture} 
+                          alt={booking.class.tutor?.name || 'Tutor'} 
+                          sx={{ width: 32, height: 32 }}
+                        >
+                          {booking.class.tutor?.name?.charAt(0) || 'T'}
+                        </Avatar>
                         <Typography variant="body2">
-                          {format(parseISO(`${booking.date}T${booking.startTime}`), 'MMM d, yyyy')}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {booking.startTime} - {booking.endTime}
+                          {booking.class.tutor?.name || 'Unassigned Tutor'}
                         </Typography>
                       </Box>
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2">
-                      {booking.bookedSeats}/{booking.capacity}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {Math.round((booking.bookedSeats / booking.capacity) * 100)}% full
-                    </Typography>
-                  </TableCell>
-                  <TableCell>${booking.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={booking.status}
-                      color={statusColors[booking.status] || 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    {booking.status === 'pending' ? (
-                      <>
-                        <Button
-                          color="success"
-                          size="small"
-                          onClick={() => handleApprove(booking.id)}
-                          sx={{ mr: 1 }}
-                        >
-                          Approve
-                        </Button>
-                        <Button
-                          color="error"
-                          size="small"
-                          onClick={() => handleRejectClick(booking)}
-                          sx={{ mr: 1 }}
-                        >
-                          Reject
-                        </Button>
-                        <IconButton
-                          color="primary"
-                          onClick={() => navigate(`/admin/bookings/edit/${booking.id}`)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteClick(booking)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </>
-                    ) : (
-                      <>
-                        <IconButton
-                          color="primary"
-                          onClick={() => navigate(`/admin/bookings/edit/${booking.id}`)}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                        <IconButton
-                          color="error"
-                          onClick={() => handleDeleteClick(booking)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">{booking.class.location?.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {`${booking.class.location?.address?.city}, ${booking.class.location?.address?.state}`}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {format(new Date(booking.bookingDate), 'MMM d, yyyy')}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {`${booking.class.schedule?.[0]?.startTime || 'N/A'} - ${booking.class.schedule?.[0]?.endTime || 'N/A'}`}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        {booking.class.capacity}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Typography variant="body2">
+                        ${booking.paymentAmount}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={booking.status.replace('_', ' ')}
+                        color={getStatusColor(booking.status)}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell align="right">
+                      {booking.status === 'pending' ? (
+                        <>
+                          <Button
+                            color="success"
+                            size="small"
+                            onClick={() => handleApprove(booking._id)}
+                            sx={{ mr: 1 }}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            color="error"
+                            size="small"
+                            onClick={() => handleRejectClick(booking)}
+                            sx={{ mr: 1 }}
+                          >
+                            Reject
+                          </Button>
+                          <IconButton
+                            color="primary"
+                            onClick={() => navigate(`/admin/bookings/edit/${booking._id}`)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteClick(booking)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      ) : (
+                        <>
+                          <IconButton
+                            color="primary"
+                            onClick={() => navigate(`/admin/bookings/edit/${booking._id}`)}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            color="error"
+                            onClick={() => handleDeleteClick(booking)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))
+            )}
           </TableBody>
         </Table>
         <TablePagination
@@ -344,7 +459,6 @@ const BookingsList = () => {
         />
       </TableContainer>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
@@ -352,7 +466,7 @@ const BookingsList = () => {
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete the booking for {selectedBooking?.className} on {selectedBooking?.date}? This action cannot be undone.
+            Are you sure you want to delete this booking? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -363,7 +477,6 @@ const BookingsList = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Reject Confirmation Dialog */}
       <Dialog
         open={rejectDialogOpen}
         onClose={() => setRejectDialogOpen(false)}
