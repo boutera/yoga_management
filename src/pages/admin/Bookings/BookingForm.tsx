@@ -13,90 +13,90 @@ import {
   MenuItem,
   SelectChangeEvent,
   Autocomplete,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
+import { bookingAPI, classAPI } from '../../../services/api.ts';
 
-// Mock data - replace with actual API calls later
-const mockBooking = {
-  id: '1',
-  classId: '1',
-  className: 'Hatha Yoga',
-  tutorId: '1',
-  tutorName: 'Sarah Johnson',
-  locationId: '1',
-  locationName: 'Downtown Studio',
-  date: '2024-03-20',
-  startTime: '09:00',
-  endTime: '10:00',
-  capacity: 20,
-  bookedSeats: 15,
-  status: 'confirmed',
-  price: 25.00,
-};
-
-const mockClasses = [
-  { id: '1', name: 'Hatha Yoga', duration: 60, price: 25.00 },
-  { id: '2', name: 'Meditation', duration: 45, price: 20.00 },
-  { id: '3', name: 'Healing Therapy', duration: 90, price: 50.00 },
-];
-
-const mockTutors = [
-  { id: '1', name: 'Sarah Johnson', specialties: ['Hatha Yoga', 'Meditation'] },
-  { id: '2', name: 'Michael Chen', specialties: ['Vinyasa Yoga', 'Pilates'] },
-  { id: '3', name: 'Emma Williams', specialties: ['Healing Therapy', 'Reiki'] },
-];
-
-const mockLocations = [
-  { id: '1', name: 'Downtown Studio', address: '123 Main St' },
-  { id: '2', name: 'Westside Center', address: '456 West Ave' },
-  { id: '3', name: 'Eastside Hub', address: '789 East Blvd' },
-];
+interface Class {
+  _id: string;
+  name: string;
+  duration: number;
+  price: number;
+  tutor: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  location: {
+    _id: string;
+    name: string;
+    address: string;
+  };
+}
 
 const BookingForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEditMode = Boolean(id);
 
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [classes, setClasses] = useState<Class[]>([]);
+
   const [formData, setFormData] = useState({
-    classId: '',
-    className: '',
-    tutorId: '',
-    tutorName: '',
-    locationId: '',
-    locationName: '',
+    class: '',
     date: new Date(),
     startTime: new Date(),
     endTime: new Date(),
-    capacity: 20,
-    bookedSeats: 0,
     status: 'pending',
     price: 0,
   });
 
   useEffect(() => {
-    if (isEditMode) {
-      // TODO: Replace with actual API call
-      const booking = mockBooking;
-      setFormData({
-        ...booking,
-        date: parseISO(booking.date),
-        startTime: parseISO(`2000-01-01T${booking.startTime}`),
-        endTime: parseISO(`2000-01-01T${booking.endTime}`),
-      });
+    fetchInitialData();
+  }, []);
+
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+      const classesRes = await classAPI.getAll();
+
+      if (classesRes.success) setClasses(classesRes.data);
+
+      if (isEditMode) {
+        const bookingRes = await bookingAPI.getById(id!);
+        if (bookingRes.success) {
+          const booking = bookingRes.data;
+          setFormData({
+            class: booking.class._id,
+            date: parseISO(booking.bookingDate),
+            startTime: parseISO(booking.bookingDate),
+            endTime: new Date(parseISO(booking.bookingDate).getTime() + booking.class.duration * 60000),
+            status: booking.status,
+            price: booking.paymentAmount,
+          });
+        }
+      }
+    } catch (err) {
+      setError('Failed to fetch initial data');
+      console.error('Error fetching initial data:', err);
+    } finally {
+      setLoading(false);
     }
-  }, [isEditMode]);
+  };
 
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'capacity' || name === 'bookedSeats' || name === 'price'
-        ? Number(value)
-        : value,
+      [name]: name === 'price' ? Number(value) : value,
     }));
   };
 
@@ -108,33 +108,12 @@ const BookingForm = () => {
     }));
   };
 
-  const handleClassChange = (event: any, newValue: typeof mockClasses[0] | null) => {
+  const handleClassChange = (event: any, newValue: Class | null) => {
     if (newValue) {
       setFormData((prev) => ({
         ...prev,
-        classId: newValue.id,
-        className: newValue.name,
+        class: newValue._id,
         price: newValue.price,
-      }));
-    }
-  };
-
-  const handleTutorChange = (event: any, newValue: typeof mockTutors[0] | null) => {
-    if (newValue) {
-      setFormData((prev) => ({
-        ...prev,
-        tutorId: newValue.id,
-        tutorName: newValue.name,
-      }));
-    }
-  };
-
-  const handleLocationChange = (event: any, newValue: typeof mockLocations[0] | null) => {
-    if (newValue) {
-      setFormData((prev) => ({
-        ...prev,
-        locationId: newValue.id,
-        locationName: newValue.name,
       }));
     }
   };
@@ -157,12 +136,44 @@ const BookingForm = () => {
     }
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // TODO: Implement save functionality
-    console.log('Saving booking:', formData);
-    navigate('/admin/bookings');
+    try {
+      setSubmitting(true);
+      setError(null);
+
+      const bookingData = {
+        class: formData.class,
+        bookingDate: format(formData.date, 'yyyy-MM-dd'),
+        startTime: format(formData.startTime, 'HH:mm'),
+        endTime: format(formData.endTime, 'HH:mm'),
+        status: formData.status,
+        paymentAmount: formData.price,
+        paymentMethod: 'credit_card', // Default payment method
+      };
+
+      if (isEditMode) {
+        await bookingAPI.update(id!, bookingData);
+      } else {
+        await bookingAPI.create(bookingData);
+      }
+
+      navigate('/admin/bookings', { state: { refresh: true } });
+    } catch (err) {
+      setError('Failed to save booking');
+      console.error('Error saving booking:', err);
+    } finally {
+      setSubmitting(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -170,51 +181,25 @@ const BookingForm = () => {
         {isEditMode ? 'Edit Booking' : 'Add New Booking'}
       </Typography>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
       <Paper sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
             <Grid item xs={12}>
               <Autocomplete
-                options={mockClasses}
+                options={classes}
                 getOptionLabel={(option) => option.name}
-                value={mockClasses.find(c => c.id === formData.classId) || null}
+                value={classes.find(c => c._id === formData.class) || null}
                 onChange={handleClassChange}
                 renderInput={(params) => (
                   <TextField
                     {...params}
                     label="Class"
-                    required
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Autocomplete
-                options={mockTutors}
-                getOptionLabel={(option) => option.name}
-                value={mockTutors.find(t => t.id === formData.tutorId) || null}
-                onChange={handleTutorChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Tutor"
-                    required
-                  />
-                )}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Autocomplete
-                options={mockLocations}
-                getOptionLabel={(option) => option.name}
-                value={mockLocations.find(l => l.id === formData.locationId) || null}
-                onChange={handleLocationChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Location"
                     required
                   />
                 )}
@@ -286,33 +271,7 @@ const BookingForm = () => {
               </LocalizationProvider>
             </Grid>
 
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Capacity"
-                name="capacity"
-                type="number"
-                value={formData.capacity}
-                onChange={handleTextChange}
-                required
-                inputProps={{ min: 1 }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                label="Booked Seats"
-                name="bookedSeats"
-                type="number"
-                value={formData.bookedSeats}
-                onChange={handleTextChange}
-                required
-                inputProps={{ min: 0, max: formData.capacity }}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
                 label="Price"
@@ -333,14 +292,20 @@ const BookingForm = () => {
                 <Button
                   variant="outlined"
                   onClick={() => navigate('/admin/bookings')}
+                  disabled={submitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   variant="contained"
+                  disabled={submitting}
                 >
-                  {isEditMode ? 'Save Changes' : 'Create Booking'}
+                  {submitting ? (
+                    <CircularProgress size={24} />
+                  ) : (
+                    isEditMode ? 'Save Changes' : 'Create Booking'
+                  )}
                 </Button>
               </Box>
             </Grid>

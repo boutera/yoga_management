@@ -86,55 +86,16 @@ exports.getBookingById = async (req, res) => {
 // Create a new booking
 exports.createBooking = async (req, res) => {
   try {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array()
-      });
-    }
-
-    const { class: classId, bookingDate, paymentMethod } = req.body;
-
-    // Check if class exists and is active
-    const classData = await Class.findById(classId);
-    if (!classData || classData.status !== 'active') {
-      return res.status(400).json({
-        success: false,
-        message: 'Class is not available for booking'
-      });
-    }
-
-    // Check if booking date is valid
-    const bookingDateTime = new Date(bookingDate);
-    if (bookingDateTime < new Date()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Cannot book for past dates'
-      });
-    }
-
-    // Check if class is already at capacity
-    const existingBookings = await Booking.countDocuments({
-      class: classId,
-      bookingDate: bookingDateTime,
-      status: { $in: ['pending', 'confirmed'] }
-    });
-
-    if (existingBookings >= classData.capacity) {
-      return res.status(400).json({
-        success: false,
-        message: 'Class is fully booked'
-      });
-    }
+    const { class: classId, bookingDate, paymentMethod, status, paymentAmount } = req.body;
 
     // Create booking
     const booking = new Booking({
       user: req.user.id,
       class: classId,
-      bookingDate: bookingDateTime,
-      paymentAmount: classData.price,
-      paymentMethod
+      bookingDate: new Date(bookingDate),
+      paymentAmount,
+      paymentMethod,
+      status: status || 'pending'
     });
 
     await booking.save();

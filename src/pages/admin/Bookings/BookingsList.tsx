@@ -112,6 +112,18 @@ const BookingsList = () => {
     fetchBookings();
   }, []);
 
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const state = window.history.state;
+      if (state?.refresh) {
+        fetchBookings();
+      }
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, []);
+
   const fetchBookings = async () => {
     try {
       setLoading(true);
@@ -174,7 +186,7 @@ const BookingsList = () => {
 
   const handleApprove = async (bookingId: string) => {
     try {
-      const response = await bookingAPI.update(bookingId, { status: 'confirmed' });
+      const response = await bookingAPI.updateStatus(bookingId, 'confirmed');
       if (response.success) {
         setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'confirmed' } : b));
       } else {
@@ -196,11 +208,7 @@ const BookingsList = () => {
     if (!selectedBooking) return;
 
     try {
-      const response = await bookingAPI.update(selectedBooking._id, { 
-        status: 'cancelled',
-        cancellationReason: rejectionReason,
-        cancellationDate: new Date().toISOString()
-      });
+      const response = await bookingAPI.updateStatus(selectedBooking._id, 'cancelled', rejectionReason);
       if (response.success) {
         setBookings(prev => prev.map(b => b._id === selectedBooking._id ? { 
           ...b, 
@@ -352,7 +360,6 @@ const BookingsList = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar 
-                          src={booking.class.tutor?.profilePicture} 
                           alt={booking.class.tutor?.name || 'Tutor'} 
                           sx={{ width: 32, height: 32 }}
                         >

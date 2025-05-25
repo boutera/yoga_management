@@ -155,6 +155,8 @@ export const bookingAPI = {
   cancel: (id: string) => api.post(`/bookings/${id}/cancel`).then(response => response.data),
   markAttendance: (id: string, status: string) =>
     api.post(`/bookings/${id}/attendance`, { status }).then(response => response.data),
+  updateStatus: (id: string, status: string, cancellationReason?: string) =>
+    api.patch(`/bookings/${id}/status`, { status, cancellationReason }).then(response => response.data),
 };
 
 // Report API
