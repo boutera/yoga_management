@@ -10,6 +10,7 @@ import Login from './pages/auth/Login';
 import Dashboard from './pages/admin/Dashboard';
 import ClassesList from './pages/admin/Classes/ClassesList';
 import ClassForm from './pages/admin/Classes/ClassForm';
+import ClassDetails from './pages/admin/Classes/ClassDetails';
 import TutorsList from './pages/admin/Tutors/TutorsList';
 import TutorForm from './pages/admin/Tutors/TutorForm';
 import LocationsList from './pages/admin/Locations/LocationsList';
@@ -39,6 +40,7 @@ const AppRoutes = () => {
               <Route path="classes" element={<ClassesList />} />
               <Route path="classes/new" element={<ClassForm />} />
               <Route path="classes/edit/:id" element={<ClassForm />} />
+              <Route path="classes/:id" element={<ClassDetails />} />
               
               {/* Tutors Routes */}
               <Route path="tutors" element={<TutorsList />} />

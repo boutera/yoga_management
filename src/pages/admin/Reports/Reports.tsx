@@ -325,6 +325,120 @@ const Reports = () => {
         </Grid>
       </Grid>
 
+      {/* Charts Section */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        {/* Revenue by Location */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardHeader title="Revenue by Location" />
+            <CardContent>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name]) => ({
+                      name,
+                      revenue: locationData?.revenueDistribution?.[name] || 0
+                    })) : []}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
+                    <Bar dataKey="revenue" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Bookings by Location */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardHeader title="Bookings by Location" />
+            <CardContent>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name]) => ({
+                      name,
+                      bookings: locationData?.bookingDistribution?.[name] || 0
+                    })) : []}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="bookings" fill="#82ca9d" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Class Distribution */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardHeader title="Class Distribution" />
+            <CardContent>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name, value]) => ({
+                        name,
+                        value
+                      })) : []}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {Object.entries(locationData?.classDistribution || {}).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Utilization Rate */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardHeader title="Location Utilization" />
+            <CardContent>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name]) => ({
+                      name,
+                      utilization: locationData?.capacityUtilization?.[name]?.utilizationRate || 0
+                    })) : []}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis domain={[0, 100]} />
+                    <Tooltip formatter={(value) => [`${value}%`, 'Utilization']} />
+                    <Bar dataKey="utilization" fill="#ffc658" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
       {/* Location Performance */}
       <Card sx={{ mt: 4 }}>
         <CardHeader

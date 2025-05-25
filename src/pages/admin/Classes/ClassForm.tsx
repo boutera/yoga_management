@@ -17,26 +17,56 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { classAPI } from '../../../services/api.ts';
+import { classAPI, tutorAPI, locationAPI } from '../../../services/api.ts';
 
 interface Class {
   _id: string;
   name: string;
   description: string;
-  requiredSkills: string[];
-  duration: number;
-  maxCapacity: number;
+  tutor: string;
+  location: string;
+  capacity: number;
   price: number;
-  status: 'active' | 'inactive';
+  duration: number;
+  schedule: {
+    dayOfWeek: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
+    startTime: string;
+    endTime: string;
+  }[];
+  status: 'active' | 'inactive' | 'cancelled';
+  category: 'Hatha' | 'Vinyasa' | 'Ashtanga' | 'Yin' | 'Restorative' | 'Power' | 'Other';
+  level: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels';
+  requirements: string[];
+  equipment: string[];
+  maxAge?: number;
+  minAge?: number;
 }
 
-const availableSkills = [
-  'Yoga Certification',
-  'Meditation Training',
-  'Healing Certification',
-  'Energy Work',
-  'Reiki Certification',
-  'Pilates Certification',
+const availableCategories = [
+  'Hatha',
+  'Vinyasa',
+  'Ashtanga',
+  'Yin',
+  'Restorative',
+  'Power',
+  'Other'
+];
+
+const availableLevels = [
+  'Beginner',
+  'Intermediate',
+  'Advanced',
+  'All Levels'
+];
+
+const daysOfWeek = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday'
 ];
 
 const ClassForm = () => {
@@ -46,21 +76,50 @@ const ClassForm = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [locations, setLocations] = useState<any[]>([]);
   const [formData, setFormData] = useState<Omit<Class, '_id'>>({
     name: '',
     description: '',
-    requiredSkills: [],
-    duration: 60,
-    maxCapacity: 20,
+    tutor: '',
+    location: '',
+    capacity: 10,
     price: 0,
+    duration: 60,
+    schedule: [
+      {
+        dayOfWeek: 'Monday',
+        startTime: '09:00',
+        endTime: '10:00'
+      }
+    ],
     status: 'active',
+    category: 'Hatha',
+    level: 'Beginner',
+    requirements: [],
+    equipment: []
   });
 
   useEffect(() => {
     if (isEditMode && id) {
       fetchClass(id);
     }
+    fetchTutorsAndLocations();
   }, [isEditMode, id]);
+
+  const fetchTutorsAndLocations = async () => {
+    try {
+      const [tutorsRes, locationsRes] = await Promise.all([
+        tutorAPI.getAll(),
+        locationAPI.getAll()
+      ]);
+      setTutors(tutorsRes.data);
+      setLocations(locationsRes.data);
+    } catch (err) {
+      console.error('Error fetching tutors and locations:', err);
+      setError('Failed to fetch tutors and locations');
+    }
+  };
 
   const fetchClass = async (classId: string) => {
     try {
@@ -81,7 +140,7 @@ const ClassForm = () => {
     const { name, value } = event.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === 'duration' || name === 'maxCapacity' || name === 'price'
+      [name]: name === 'duration' || name === 'capacity' || name === 'price'
         ? Number(value)
         : value,
     }));
@@ -95,11 +154,42 @@ const ClassForm = () => {
     }));
   };
 
-  const handleSkillsChange = (event: SelectChangeEvent<string[]>) => {
-    const { value } = event.target;
-    setFormData((prev) => ({
+  const handleScheduleChange = (index: number, field: string, value: string) => {
+    setFormData(prev => ({
       ...prev,
-      requiredSkills: typeof value === 'string' ? value.split(',') : value,
+      schedule: prev.schedule.map((slot, i) => 
+        i === index ? { ...slot, [field]: value } : slot
+      )
+    }));
+  };
+
+  const addScheduleSlot = () => {
+    setFormData(prev => ({
+      ...prev,
+      schedule: [...prev.schedule, { dayOfWeek: 'Monday', startTime: '09:00', endTime: '10:00' }]
+    }));
+  };
+
+  const removeScheduleSlot = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      schedule: prev.schedule.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleArrayChange = (name: 'requirements' | 'equipment', value: string) => {
+    if (value.trim()) {
+      setFormData(prev => ({
+        ...prev,
+        [name]: [...prev[name], value.trim()]
+      }));
+    }
+  };
+
+  const removeArrayItem = (name: 'requirements' | 'equipment', index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: prev[name].filter((_, i) => i !== index)
     }));
   };
 
@@ -107,15 +197,26 @@ const ClassForm = () => {
     event.preventDefault();
     try {
       setLoading(true);
+      console.log('Submitting form data:', formData);
       if (isEditMode && id) {
         await classAPI.update(id, formData);
       } else {
-        await classAPI.create(formData);
+        const response = await classAPI.create(formData);
+        console.log('Create response:', response);
       }
       navigate('/admin/classes');
-    } catch (err) {
-      setError('Failed to save class');
+    } catch (err: any) {
       console.error('Error saving class:', err);
+      if (err.response?.data?.errors) {
+        // Handle validation errors
+        const errorMessages = err.response.data.errors.map((error: any) => error.msg).join(', ');
+        setError(errorMessages);
+      } else if (err.response?.data?.message) {
+        // Handle other error messages
+        setError(err.response.data.message);
+      } else {
+        setError('Failed to save class');
+      }
     } finally {
       setLoading(false);
     }
@@ -170,26 +271,38 @@ const ClassForm = () => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Required Skills</InputLabel>
+                <InputLabel>Tutor</InputLabel>
                 <Select
-                  multiple
-                  value={formData.requiredSkills}
-                  onChange={handleSkillsChange}
-                  input={<OutlinedInput label="Required Skills" />}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                      {selected.map((value) => (
-                        <Chip key={value} label={value} />
-                      ))}
-                    </Box>
-                  )}
+                  name="tutor"
+                  value={formData.tutor}
+                  onChange={handleSelectChange}
+                  required
                   disabled={loading}
                 >
-                  {availableSkills.map((skill) => (
-                    <MenuItem key={skill} value={skill}>
-                      {skill}
+                  {tutors.map((tutor) => (
+                    <MenuItem key={tutor._id} value={tutor._id}>
+                      {tutor.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Location</InputLabel>
+                <Select
+                  name="location"
+                  value={formData.location}
+                  onChange={handleSelectChange}
+                  required
+                  disabled={loading}
+                >
+                  {locations.map((location) => (
+                    <MenuItem key={location._id} value={location._id}>
+                      {location.name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -199,24 +312,10 @@ const ClassForm = () => {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Duration (minutes)"
-                name="duration"
+                label="Capacity"
+                name="capacity"
                 type="number"
-                value={formData.duration}
-                onChange={handleTextChange}
-                required
-                inputProps={{ min: 15, step: 15 }}
-                disabled={loading}
-              />
-            </Grid>
-
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                label="Maximum Capacity"
-                name="maxCapacity"
-                type="number"
-                value={formData.maxCapacity}
+                value={formData.capacity}
                 onChange={handleTextChange}
                 required
                 inputProps={{ min: 1 }}
@@ -242,19 +341,187 @@ const ClassForm = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Duration (minutes)"
+                name="duration"
+                type="number"
+                value={formData.duration}
+                onChange={handleTextChange}
+                required
+                inputProps={{ min: 15, step: 15 }}
+                disabled={loading}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+                <InputLabel>Category</InputLabel>
                 <Select
-                  name="status"
-                  value={formData.status}
+                  name="category"
+                  value={formData.category}
                   onChange={handleSelectChange}
-                  label="Status"
+                  required
                   disabled={loading}
                 >
-                  <MenuItem value="active">Active</MenuItem>
-                  <MenuItem value="inactive">Inactive</MenuItem>
+                  {availableCategories.map((category) => (
+                    <MenuItem key={category} value={category}>
+                      {category}
+                    </MenuItem>
+                  ))}
                 </Select>
               </FormControl>
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <FormControl fullWidth>
+                <InputLabel>Level</InputLabel>
+                <Select
+                  name="level"
+                  value={formData.level}
+                  onChange={handleSelectChange}
+                  required
+                  disabled={loading}
+                >
+                  {availableLevels.map((level) => (
+                    <MenuItem key={level} value={level}>
+                      {level}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Schedule
+              </Typography>
+              {formData.schedule.map((slot, index) => (
+                <Grid container spacing={2} key={index} sx={{ mb: 2 }}>
+                  <Grid item xs={12} sm={3}>
+                    <FormControl fullWidth>
+                      <InputLabel>Day</InputLabel>
+                      <Select
+                        value={slot.dayOfWeek}
+                        onChange={(e) => handleScheduleChange(index, 'dayOfWeek', e.target.value)}
+                        required
+                        disabled={loading}
+                      >
+                        {daysOfWeek.map((day) => (
+                          <MenuItem key={day} value={day}>
+                            {day}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      label="Start Time"
+                      type="time"
+                      value={slot.startTime}
+                      onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
+                      required
+                      disabled={loading}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField
+                      fullWidth
+                      label="End Time"
+                      type="time"
+                      value={slot.endTime}
+                      onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
+                      required
+                      disabled={loading}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <Button
+                      variant="outlined"
+                      color="error"
+                      onClick={() => removeScheduleSlot(index)}
+                      disabled={loading || formData.schedule.length === 1}
+                      sx={{ height: '100%' }}
+                    >
+                      Remove
+                    </Button>
+                  </Grid>
+                </Grid>
+              ))}
+              <Button
+                variant="outlined"
+                onClick={addScheduleSlot}
+                disabled={loading}
+                sx={{ mt: 1 }}
+              >
+                Add Time Slot
+              </Button>
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Requirements
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Grid container spacing={1}>
+                  {formData.requirements.map((req, index) => (
+                    <Grid item key={index}>
+                      <Chip
+                        label={req}
+                        onDelete={() => removeArrayItem('requirements', index)}
+                        disabled={loading}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+              <TextField
+                fullWidth
+                label="Add Requirement"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleArrayChange('requirements', (e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }}
+                disabled={loading}
+              />
+            </Grid>
+
+            <Grid item xs={12}>
+              <Typography variant="h6" gutterBottom>
+                Equipment
+              </Typography>
+              <Box sx={{ mb: 2 }}>
+                <Grid container spacing={1}>
+                  {formData.equipment.map((item, index) => (
+                    <Grid item key={index}>
+                      <Chip
+                        label={item}
+                        onDelete={() => removeArrayItem('equipment', index)}
+                        disabled={loading}
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+              </Box>
+              <TextField
+                fullWidth
+                label="Add Equipment"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleArrayChange('equipment', (e.target as HTMLInputElement).value);
+                    (e.target as HTMLInputElement).value = '';
+                  }
+                }}
+                disabled={loading}
+              />
             </Grid>
 
             <Grid item xs={12}>

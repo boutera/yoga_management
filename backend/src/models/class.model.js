@@ -39,7 +39,7 @@ const classSchema = new mongoose.Schema({
   schedule: [{
     dayOfWeek: {
       type: String,
-      enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'],
+      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
       required: true
     },
     startTime: {
@@ -61,12 +61,12 @@ const classSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['Hatha', 'Vinyasa', 'Ashtanga', 'Yin', 'Restorative', 'Hot Yoga', 'Prenatal', 'Power Yoga']
+    enum: ['Hatha', 'Vinyasa', 'Ashtanga', 'Yin', 'Restorative', 'Power', 'Other']
   },
   level: {
     type: String,
     required: [true, 'Level is required'],
-    enum: ['beginner', 'intermediate', 'advanced', 'all']
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'All Levels']
   },
   requirements: [{
     type: String,

@@ -67,8 +67,30 @@ export const userAPI = {
 export const classAPI = {
   getAll: () => api.get('/classes').then(response => response.data),
   getById: (id: string) => api.get(`/classes/${id}`).then(response => response.data),
-  create: (data: any) => api.post('/classes', data).then(response => response.data),
-  update: (id: string, data: any) => api.put(`/classes/${id}`, data).then(response => response.data),
+  create: (data: any) => {
+    console.log('API: Creating class with data:', data);
+    return api.post('/classes', data)
+      .then(response => {
+        console.log('API: Create class response:', response);
+        return response.data;
+      })
+      .catch(error => {
+        console.error('API: Create class error:', error.response?.data || error);
+        throw error;
+      });
+  },
+  update: (id: string, data: any) => {
+    console.log('API: Updating class with data:', data);
+    return api.put(`/classes/${id}`, data)
+      .then(response => {
+        console.log('API: Update class response:', response);
+        return response.data;
+      })
+      .catch(error => {
+        console.error('API: Update class error:', error.response?.data || error);
+        throw error;
+      });
+  },
   delete: (id: string) => api.delete(`/classes/${id}`).then(response => response.data),
   getByTutor: (tutorId: string) => api.get(`/classes/tutor/${tutorId}`).then(response => response.data),
   getByLocation: (locationId: string) => api.get(`/classes/location/${locationId}`).then(response => response.data),

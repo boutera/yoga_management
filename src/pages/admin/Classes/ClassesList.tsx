@@ -28,6 +28,7 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
+  Visibility as VisibilityIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { classAPI } from '../../../services/api.ts';
@@ -208,13 +209,22 @@ const ClassesList = () => {
                     <TableCell align="right">
                       <IconButton
                         color="primary"
+                        onClick={() => navigate(`/admin/classes/${classItem._id}`)}
+                        title="View Details"
+                      >
+                        <VisibilityIcon />
+                      </IconButton>
+                      <IconButton
+                        color="primary"
                         onClick={() => navigate(`/admin/classes/edit/${classItem._id}`)}
+                        title="Edit"
                       >
                         <EditIcon />
                       </IconButton>
                       <IconButton
                         color="error"
                         onClick={() => handleDeleteClick(classItem)}
+                        title="Delete"
                       >
                         <DeleteIcon />
                       </IconButton>
