@@ -32,16 +32,23 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { tutorAPI } from '../../../services/api.ts';
 
+interface Certification {
+  _id?: string;
+  name: string;
+  issuer: string;
+  year: number;
+}
+
 interface Tutor {
   _id: string;
   name: string;
   email: string;
   phone: string;
   specialties: string[];
-  certifications: string[];
+  certifications: Certification[];
   experience: number;
-  status: 'active' | 'inactive';
-  avatar?: string;
+  status: 'active' | 'inactive' | 'on_leave';
+  bio?: string;
 }
 
 const TutorsList = () => {
@@ -64,6 +71,7 @@ const TutorsList = () => {
       setLoading(true);
       setError(null);
       const response = await tutorAPI.getAll();
+      console.log('Fetched tutors:', response);
       if (response.success) {
         setTutors(response.data);
       } else {
@@ -174,90 +182,69 @@ const TutorsList = () => {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>Tutor</TableCell>
-              <TableCell>Contact</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Phone</TableCell>
               <TableCell>Specialties</TableCell>
               <TableCell>Certifications</TableCell>
-              <TableCell>Experience (years)</TableCell>
+              <TableCell>Experience</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredTutors.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} align="center">
-                  <Typography>No tutors found</Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredTutors
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((tutor) => (
-                  <TableRow key={tutor._id}>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar src={tutor.avatar} alt={tutor.name} />
-                        <Box>
-                          <Typography variant="subtitle2">
-                            {tutor.name}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{tutor.email}</Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {tutor.phone}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
+            {filteredTutors
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((tutor) => (
+                <TableRow key={tutor._id}>
+                  <TableCell>{tutor.name}</TableCell>
+                  <TableCell>{tutor.email}</TableCell>
+                  <TableCell>{tutor.phone}</TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                       {tutor.specialties.map((specialty) => (
-                        <Chip
-                          key={specialty}
-                          label={specialty}
-                          size="small"
-                          sx={{ mr: 0.5, mb: 0.5 }}
+                        <Chip key={specialty} label={specialty} size="small" />
+                      ))}
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                      {tutor.certifications.map((cert) => (
+                        <Chip 
+                          key={cert._id || cert.name} 
+                          label={`${cert.name} (${cert.year})`} 
+                          size="small" 
+                          color="primary" 
+                          variant="outlined" 
                         />
                       ))}
-                    </TableCell>
-                    <TableCell>
-                      {tutor.certifications?.map((cert) => (
-                        <Chip
-                          key={cert}
-                          label={cert}
-                          size="small"
-                          color="primary"
-                          variant="outlined"
-                          sx={{ mr: 0.5, mb: 0.5 }}
-                        />
-                      ))}
-                    </TableCell>
-                    <TableCell>{tutor.experience}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={tutor.status}
-                        color={tutor.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        color="primary"
-                        onClick={() => navigate(`/admin/tutors/edit/${tutor._id}`)}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteClick(tutor)}
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-            )}
+                    </Box>
+                  </TableCell>
+                  <TableCell>{tutor.experience} years</TableCell>
+                  <TableCell>
+                    <Chip
+                      label={tutor.status}
+                      color={tutor.status === 'active' ? 'success' : 'default'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton
+                      size="small"
+                      onClick={() => navigate(`/admin/tutors/edit/${tutor._id}`)}
+                    >
+                      <EditIcon />
+                    </IconButton>
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => handleDeleteClick(tutor)}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
           </TableBody>
         </Table>
         <TablePagination
@@ -275,15 +262,15 @@ const TutorsList = () => {
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
       >
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle>Delete Tutor</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete {selectedTutor?.name}? This action cannot be undone.
+            Are you sure you want to delete this tutor? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
             Delete
           </Button>
         </DialogActions>
