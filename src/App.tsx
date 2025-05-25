@@ -7,6 +7,8 @@ import ClassesList from './pages/admin/Classes/ClassesList';
 import ClassForm from './pages/admin/Classes/ClassForm';
 import TutorsList from './pages/admin/Tutors/TutorsList';
 import TutorForm from './pages/admin/Tutors/TutorForm';
+import BookingForm from './pages/admin/Bookings/BookingForm';
+import BookingsList from './pages/admin/Bookings/BookingsList';
 
 // Create a theme instance
 const theme = createTheme({
@@ -72,7 +74,9 @@ function App() {
           <Route path="/admin/tutors/new" element={<AdminLayout><TutorForm /></AdminLayout>} />
           <Route path="/admin/tutors/edit/:id" element={<AdminLayout><TutorForm /></AdminLayout>} />
           <Route path="/admin/locations" element={<AdminLayout><div>Locations Management (Coming Soon)</div></AdminLayout>} />
-          <Route path="/admin/bookings" element={<AdminLayout><div>Bookings Management (Coming Soon)</div></AdminLayout>} />
+          <Route path="/admin/bookings" element={<AdminLayout><BookingsList /></AdminLayout>} />
+          <Route path="/admin/bookings/new" element={<AdminLayout><BookingForm /></AdminLayout>} />
+          <Route path="/admin/bookings/:id" element={<AdminLayout><BookingForm /></AdminLayout>} />
           <Route path="/admin/reports" element={<AdminLayout><div>Reports (Coming Soon)</div></AdminLayout>} />
         </Routes>
       </Router>
