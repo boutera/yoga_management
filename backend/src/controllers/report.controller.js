@@ -221,16 +221,12 @@ exports.getClassReport = async (req, res) => {
 // Get tutor report
 exports.getTutorReport = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const query = {
-      createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      }
-    };
-
-    const tutors = await Tutor.find(query).select('-__v');
-    const classes = await Class.find({ tutor: { $in: tutors.map(t => t._id) } })
+    // Get all tutors
+    const tutors = await Tutor.find().select('-__v');
+    const classes = await Class.find({ 
+      tutor: { $in: tutors.map(t => t._id) },
+      status: 'active'
+    })
       .populate('tutor', 'name')
       .select('-__v');
 
@@ -251,13 +247,12 @@ exports.getTutorReport = async (req, res) => {
         report.bySpecialty[specialty] = (report.bySpecialty[specialty] || 0) + 1;
       });
 
-      // Count classes
+      // Count active classes
       const tutorClasses = classes.filter(c => c.tutor._id.toString() === tutor._id.toString());
       report.classDistribution[tutor.name] = tutorClasses.length;
 
-      // Count ratings
-      const rating = Math.floor(tutor.rating);
-      report.ratingDistribution[rating] = (report.ratingDistribution[rating] || 0) + 1;
+      // Store rating by tutor name
+      report.ratingDistribution[tutor.name] = tutor.rating;
     });
 
     res.json(report);

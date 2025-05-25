@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -19,6 +19,8 @@ import {
   TableHead,
   TableRow,
   Paper,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
@@ -26,7 +28,7 @@ import {
   People as PeopleIcon,
   AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
-import { format, subMonths, startOfMonth, subDays } from 'date-fns';
+import { format, subMonths, startOfMonth, subDays, subYears } from 'date-fns';
 import {
   LineChart,
   Line,
@@ -42,112 +44,83 @@ import {
   Pie,
   Cell,
 } from 'recharts';
+import { reportAPI } from '../../../services/api';
 
-// Mock data - replace with actual API calls later
-const mockRevenueData = {
-  totalRevenue: 12500,
-  monthlyGrowth: 15.5,
-  byClass: [
-    { name: 'Hatha Yoga', revenue: 4500, bookings: 180 },
-    { name: 'Meditation', revenue: 3200, bookings: 160 },
-    { name: 'Healing Therapy', revenue: 4800, bookings: 96 },
-  ],
-};
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
-const mockAttendanceData = {
-  totalBookings: 436,
-  averageAttendance: 78.5,
-};
-
-const mockTutorPerformance = [
-  {
-    id: '1',
-    name: 'Sarah Johnson',
-    classes: 45,
-    students: 180,
-    rating: 4.8,
-    revenue: 4500,
-  },
-  {
-    id: '2',
-    name: 'Michael Chen',
-    classes: 38,
-    students: 152,
-    rating: 4.7,
-    revenue: 3800,
-  },
-  {
-    id: '3',
-    name: 'Emma Williams',
-    classes: 32,
-    students: 96,
-    rating: 4.9,
-    revenue: 4800,
-  },
-];
-
-// New mock data for trends and time slots
-const mockAttendanceTrend = Array.from({ length: 30 }, (_, i) => ({
-  date: format(subDays(new Date(), 29 - i), 'MMM dd'),
-  attendance: Math.floor(Math.random() * 30) + 50,
-  bookings: Math.floor(Math.random() * 40) + 60,
-}));
-
-const mockPopularTimeSlots = [
-  { time: '6:00 AM', bookings: 45 },
-  { time: '8:00 AM', bookings: 78 },
-  { time: '10:00 AM', bookings: 65 },
-  { time: '12:00 PM', bookings: 42 },
-  { time: '2:00 PM', bookings: 38 },
-  { time: '4:00 PM', bookings: 85 },
-  { time: '6:00 PM', bookings: 92 },
-  { time: '8:00 PM', bookings: 68 },
-];
-
-const mockClassDistribution = [
-  { name: 'Hatha Yoga', value: 35 },
-  { name: 'Meditation', value: 25 },
-  { name: 'Healing Therapy', value: 20 },
-  { name: 'Vinyasa', value: 15 },
-  { name: 'Yin Yoga', value: 5 },
-];
-
-// Location-specific data
-const mockLocations = [
-  { id: '1', name: 'Downtown Studio' },
-  { id: '2', name: 'Westside Center' },
-  { id: '3', name: 'Eastside Hub' },
-];
-
-const mockLocationPerformance = [
-  {
-    location: 'Downtown Studio',
-    totalRevenue: 16060,
-    totalBookings: 1040,
-    averageAttendance: 173,
-    utilizationRate: '85%',
-  },
-  {
-    location: 'Westside Center',
-    totalRevenue: 15540,
-    totalBookings: 949,
-    averageAttendance: 158,
-    utilizationRate: '82%',
-  },
-  {
-    location: 'Eastside Hub',
-    totalRevenue: 14950,
-    totalBookings: 919,
-    averageAttendance: 153,
-    utilizationRate: '80%',
-  },
-];
-
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+interface TutorReport {
+  totalTutors: number;
+  byStatus: Record<string, number>;
+  bySpecialty: Record<string, number>;
+  classDistribution: Record<string, number>;
+  ratingDistribution: Record<string, number>;
+}
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState('month');
   const [selectedLocation, setSelectedLocation] = useState('all');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [revenueData, setRevenueData] = useState<any>(null);
+  const [bookingData, setBookingData] = useState<any>(null);
+  const [attendanceData, setAttendanceData] = useState<any>(null);
+  const [tutorData, setTutorData] = useState<TutorReport | null>(null);
+  const [locationData, setLocationData] = useState<any>(null);
+
+  const getDateRange = () => {
+    const now = new Date();
+    let startDate: Date;
+    let endDate = now;
+
+    switch (timeRange) {
+      case 'week':
+        startDate = subDays(now, 7);
+        return { startDate, endDate, label: 'Last 7 days' };
+      case 'month':
+        startDate = subMonths(now, 1);
+        return { startDate, endDate, label: format(startDate, 'MMM yyyy') };
+      case 'quarter':
+        startDate = subMonths(now, 3);
+        return { startDate, endDate, label: 'Last 3 months' };
+      case 'year':
+        startDate = subYears(now, 1);
+        return { startDate, endDate, label: 'Last 12 months' };
+      default:
+        startDate = subMonths(now, 1);
+        return { startDate, endDate, label: 'Last 30 days' };
+    }
+  };
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const { startDate, endDate } = getDateRange();
+
+      const [revenue, bookings, attendance, tutors, locations] = await Promise.all([
+        reportAPI.getRevenueReport(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')),
+        reportAPI.getBookingReport(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')),
+        reportAPI.getAttendanceReport(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')),
+        reportAPI.getTutorReport(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')),
+        reportAPI.getLocationReport(format(startDate, 'yyyy-MM-dd'), format(endDate, 'yyyy-MM-dd')),
+      ]);
+
+      setRevenueData(revenue);
+      setBookingData(bookings);
+      setAttendanceData(attendance);
+      setTutorData(tutors);
+      setLocationData(locations);
+    } catch (err) {
+      setError('Failed to fetch reports. Please try again later.');
+      console.error('Error fetching reports:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+  }, [timeRange, selectedLocation]);
 
   const handleTimeRangeChange = (event: SelectChangeEvent) => {
     setTimeRange(event.target.value);
@@ -157,21 +130,21 @@ const Reports = () => {
     setSelectedLocation(event.target.value);
   };
 
-  const getDateRange = () => {
-    const now = new Date();
-    switch (timeRange) {
-      case 'week':
-        return 'Last 7 days';
-      case 'month':
-        return format(startOfMonth(subMonths(now, 1)), 'MMM yyyy');
-      case 'quarter':
-        return 'Last 3 months';
-      case 'year':
-        return 'Last 12 months';
-      default:
-        return 'Last 30 days';
-    }
-  };
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -199,9 +172,9 @@ const Reports = () => {
               onChange={handleLocationChange}
             >
               <MenuItem value="all">All Locations</MenuItem>
-              {mockLocations.map((location) => (
-                <MenuItem key={location.id} value={location.id}>
-                  {location.name}
+              {locationData?.byCity && Object.keys(locationData.byCity).map((city) => (
+                <MenuItem key={city} value={city}>
+                  {city}
                 </MenuItem>
               ))}
             </Select>
@@ -210,7 +183,7 @@ const Reports = () => {
       </Box>
 
       <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Showing data for {getDateRange()}
+        Showing data for {getDateRange().label}
       </Typography>
 
       {/* Key Metrics */}
@@ -223,10 +196,10 @@ const Reports = () => {
                 <Typography variant="h6">Total Revenue</Typography>
               </Box>
               <Typography variant="h4" gutterBottom>
-                ${mockRevenueData.totalRevenue.toLocaleString()}
+                ${revenueData?.totalRevenue?.toLocaleString() || 0}
               </Typography>
               <Typography variant="body2" color="success.main">
-                +{mockRevenueData.monthlyGrowth}% from last month
+                Revenue by class type
               </Typography>
             </CardContent>
           </Card>
@@ -239,10 +212,10 @@ const Reports = () => {
                 <Typography variant="h6">Total Bookings</Typography>
               </Box>
               <Typography variant="h4" gutterBottom>
-                {mockAttendanceData.totalBookings}
+                {bookingData?.totalBookings || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {mockAttendanceData.averageAttendance}% average attendance
+                {attendanceData?.attendance?.present || 0}% attendance rate
               </Typography>
             </CardContent>
           </Card>
@@ -255,129 +228,17 @@ const Reports = () => {
                 <Typography variant="h6">Active Classes</Typography>
               </Box>
               <Typography variant="h4" gutterBottom>
-                115
+                {tutorData?.classDistribution ? Object.values(tutorData.classDistribution).reduce((sum: number, count: number) => sum + count, 0) : 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Currently active
+                Total classes across all tutors
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Attendance Trends Chart */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12}>
-          <Card>
-            <CardHeader
-              title="Attendance Trends"
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <Box sx={{ height: 400 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={mockAttendanceTrend}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line
-                      type="monotone"
-                      dataKey="attendance"
-                      stroke="#8884d8"
-                      name="Attendance %"
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="bookings"
-                      stroke="#82ca9d"
-                      name="Bookings"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Popular Time Slots and Class Distribution */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardHeader
-              title="Popular Time Slots"
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={mockPopularTimeSlots}
-                    margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="time" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Bar dataKey="bookings" fill="#8884d8" name="Number of Bookings" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardHeader
-              title="Class Distribution"
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={mockClassDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {mockClassDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Revenue by Class and Tutor Performance */}
+      {/* Revenue by Class */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
           <Card>
@@ -400,11 +261,15 @@ const Reports = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockRevenueData.byClass.map((row) => (
-                      <TableRow key={row.name}>
-                        <TableCell>{row.name}</TableCell>
-                        <TableCell align="right">{row.bookings}</TableCell>
-                        <TableCell align="right">${row.revenue}</TableCell>
+                    {revenueData?.byClass && Object.entries(revenueData.byClass).map(([className, revenue]) => (
+                      <TableRow key={className}>
+                        <TableCell>{className}</TableCell>
+                        <TableCell align="right">
+                          {bookingData?.byClass?.[className] || 0}
+                        </TableCell>
+                        <TableCell align="right">
+                          ${Number(revenue).toLocaleString()}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -414,6 +279,7 @@ const Reports = () => {
           </Card>
         </Grid>
 
+        {/* Tutor Performance */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardHeader
@@ -437,13 +303,19 @@ const Reports = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockTutorPerformance.map((tutor) => (
-                      <TableRow key={tutor.id}>
-                        <TableCell>{tutor.name}</TableCell>
-                        <TableCell align="right">{tutor.classes}</TableCell>
-                        <TableCell align="right">{tutor.students}</TableCell>
-                        <TableCell align="right">{tutor.rating}</TableCell>
-                        <TableCell align="right">${tutor.revenue}</TableCell>
+                    {tutorData?.classDistribution && Object.entries(tutorData.classDistribution).map(([tutorName, classes]) => (
+                      <TableRow key={tutorName}>
+                        <TableCell>{tutorName}</TableCell>
+                        <TableCell align="right">{classes}</TableCell>
+                        <TableCell align="right">
+                          {bookingData?.byTutor?.[tutorName] || 0}
+                        </TableCell>
+                        <TableCell align="right">
+                          {tutorData?.ratingDistribution?.[tutorName] || 'N/A'}
+                        </TableCell>
+                        <TableCell align="right">
+                          ${revenueData?.byTutor?.[tutorName]?.toLocaleString() || 0}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -454,8 +326,8 @@ const Reports = () => {
         </Grid>
       </Grid>
 
-      {/* Location Performance Section */}
-      <Card>
+      {/* Location Performance */}
+      <Card sx={{ mt: 4 }}>
         <CardHeader
           title="Location Performance"
           action={
@@ -477,22 +349,22 @@ const Reports = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {mockLocationPerformance.map((location) => (
-                  <TableRow key={location.location}>
+                {locationData?.classDistribution && Object.entries(locationData.classDistribution).map(([locationName, classes]) => (
+                  <TableRow key={locationName}>
                     <TableCell component="th" scope="row">
-                      {location.location}
+                      {locationName}
                     </TableCell>
                     <TableCell align="right">
-                      ${location.totalRevenue.toLocaleString()}
+                      ${revenueData?.byLocation?.[locationName]?.toLocaleString() || 0}
                     </TableCell>
                     <TableCell align="right">
-                      {location.totalBookings.toLocaleString()}
+                      {bookingData?.byLocation?.[locationName] || 0}
                     </TableCell>
                     <TableCell align="right">
-                      {location.averageAttendance}
+                      {attendanceData?.byLocation?.[locationName]?.present || 0}%
                     </TableCell>
                     <TableCell align="right">
-                      {location.utilizationRate}
+                      {locationData?.capacityUtilization?.[locationName]?.utilizationRate || 0}%
                     </TableCell>
                   </TableRow>
                 ))}
