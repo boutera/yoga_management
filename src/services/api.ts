@@ -66,7 +66,18 @@ export const userAPI = {
 // Class API
 export const classAPI = {
   getAll: () => api.get('/classes').then(response => response.data),
-  getById: (id: string) => api.get(`/classes/${id}`).then(response => response.data),
+  getById: (id: string) => {
+    console.log('API: Fetching class with ID:', id);
+    return api.get(`/classes/${id}?populate=tutor,location`)
+      .then(response => {
+        console.log('API: Get class response:', response);
+        return response.data;
+      })
+      .catch(error => {
+        console.error('API: Get class error:', error.response?.data || error);
+        throw error;
+      });
+  },
   create: (data: any) => {
     console.log('API: Creating class with data:', data);
     return api.post('/classes', data)

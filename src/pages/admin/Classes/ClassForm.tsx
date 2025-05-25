@@ -36,8 +36,6 @@ interface Class {
   status: 'active' | 'inactive' | 'cancelled';
   category: 'Hatha' | 'Vinyasa' | 'Ashtanga' | 'Yin' | 'Restorative' | 'Power' | 'Other';
   level: 'Beginner' | 'Intermediate' | 'Advanced' | 'All Levels';
-  requirements: string[];
-  equipment: string[];
   maxAge?: number;
   minAge?: number;
 }
@@ -96,8 +94,8 @@ const ClassForm = () => {
     status: 'active',
     category: 'Hatha',
     level: 'Beginner',
-    requirements: [],
-    equipment: []
+    maxAge: undefined,
+    minAge: undefined
   });
 
   useEffect(() => {
@@ -125,7 +123,16 @@ const ClassForm = () => {
     try {
       setLoading(true);
       const response = await classAPI.getById(classId);
-      const { _id, ...classData } = response.data;
+      console.log('Fetched class data:', response.data);
+      
+      // Ensure we have the tutor and location IDs
+      const classData = {
+        ...response.data,
+        tutor: response.data.tutor._id || response.data.tutor,
+        location: response.data.location._id || response.data.location
+      };
+      
+      console.log('Processed class data:', classData);
       setFormData(classData);
       setError(null);
     } catch (err) {
@@ -138,20 +145,30 @@ const ClassForm = () => {
 
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === 'duration' || name === 'capacity' || name === 'price'
-        ? Number(value)
-        : value,
-    }));
+    console.log('Text change:', { name, value });
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [name]: name === 'duration' || name === 'capacity' || name === 'price'
+          ? Number(value)
+          : value,
+      };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
   };
 
   const handleSelectChange = (event: SelectChangeEvent) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    console.log('Select change:', { name, value });
+    setFormData((prev) => {
+      const newData = {
+        ...prev,
+        [name]: value,
+      };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
   };
 
   const handleScheduleChange = (index: number, field: string, value: string) => {
@@ -174,22 +191,6 @@ const ClassForm = () => {
     setFormData(prev => ({
       ...prev,
       schedule: prev.schedule.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleArrayChange = (name: 'requirements' | 'equipment', value: string) => {
-    if (value.trim()) {
-      setFormData(prev => ({
-        ...prev,
-        [name]: [...prev[name], value.trim()]
-      }));
-    }
-  };
-
-  const removeArrayItem = (name: 'requirements' | 'equipment', index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: prev[name].filter((_, i) => i !== index)
     }));
   };
 
@@ -460,68 +461,6 @@ const ClassForm = () => {
               >
                 Add Time Slot
               </Button>
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Requirements
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Grid container spacing={1}>
-                  {formData.requirements.map((req, index) => (
-                    <Grid item key={index}>
-                      <Chip
-                        label={req}
-                        onDelete={() => removeArrayItem('requirements', index)}
-                        disabled={loading}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-              <TextField
-                fullWidth
-                label="Add Requirement"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleArrayChange('requirements', (e.target as HTMLInputElement).value);
-                    (e.target as HTMLInputElement).value = '';
-                  }
-                }}
-                disabled={loading}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
-                Equipment
-              </Typography>
-              <Box sx={{ mb: 2 }}>
-                <Grid container spacing={1}>
-                  {formData.equipment.map((item, index) => (
-                    <Grid item key={index}>
-                      <Chip
-                        label={item}
-                        onDelete={() => removeArrayItem('equipment', index)}
-                        disabled={loading}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-              <TextField
-                fullWidth
-                label="Add Equipment"
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleArrayChange('equipment', (e.target as HTMLInputElement).value);
-                    (e.target as HTMLInputElement).value = '';
-                  }
-                }}
-                disabled={loading}
-              />
             </Grid>
 
             <Grid item xs={12}>
