@@ -10,6 +10,8 @@ import TutorForm from './pages/admin/Tutors/TutorForm';
 import BookingForm from './pages/admin/Bookings/BookingForm';
 import BookingsList from './pages/admin/Bookings/BookingsList';
 import Reports from './pages/admin/Reports/Reports';
+import LocationsList from './pages/admin/Locations/LocationsList';
+import LocationForm from './pages/admin/Locations/LocationForm';
 
 // Create a theme instance
 const theme = createTheme({
@@ -74,6 +76,9 @@ function App() {
           <Route path="/admin/tutors" element={<AdminLayout><TutorsList /></AdminLayout>} />
           <Route path="/admin/tutors/new" element={<AdminLayout><TutorForm /></AdminLayout>} />
           <Route path="/admin/tutors/edit/:id" element={<AdminLayout><TutorForm /></AdminLayout>} />
+          <Route path="/admin/locations" element={<AdminLayout><LocationsList /></AdminLayout>} />
+          <Route path="/admin/locations/new" element={<AdminLayout><LocationForm /></AdminLayout>} />
+          <Route path="/admin/locations/edit/:id" element={<AdminLayout><LocationForm /></AdminLayout>} />
           <Route path="/admin/bookings" element={<AdminLayout><BookingsList /></AdminLayout>} />
           <Route path="/admin/bookings/new" element={<AdminLayout><BookingForm /></AdminLayout>} />
           <Route path="/admin/bookings/:id" element={<AdminLayout><BookingForm /></AdminLayout>} />
