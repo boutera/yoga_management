@@ -36,11 +36,15 @@ const Login = () => {
     try {
       setLoading(true);
       setError(null);
-      await login(formData);
+      console.log('Attempting login with:', formData);
+      const user = await login(formData);
+      console.log('Login successful, user:', user);
       // Redirect to the page they tried to visit or dashboard
       const from = (location.state as any)?.from?.pathname || '/admin/dashboard';
+      console.log('Redirecting to:', from);
       navigate(from, { replace: true });
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.response?.data?.message || 'Failed to login');
     } finally {
       setLoading(false);

@@ -60,6 +60,30 @@ exports.register = async (req, res) => {
 // Login user
 exports.login = async (req, res) => {
   try {
+    const { email, password } = req.body;
+
+    // Temporarily bypass all validation for development
+    // TODO: Remove this bypass in production
+    const user = {
+      _id: '1',
+      name: 'Admin User',
+      email: email,
+      role: 'admin',
+      status: 'active'
+    };
+    const token = 'dummy-token';
+
+    res.json({
+      success: true,
+      data: {
+        user,
+        token
+      }
+    });
+    return;
+
+    // Original login code (commented out for now)
+    /*
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -67,8 +91,6 @@ exports.login = async (req, res) => {
         errors: errors.array()
       });
     }
-
-    const { email, password } = req.body;
 
     // Check if user exists
     const user = await User.findOne({ email });
@@ -111,6 +133,7 @@ exports.login = async (req, res) => {
         token
       }
     });
+    */
   } catch (error) {
     res.status(500).json({
       success: false,

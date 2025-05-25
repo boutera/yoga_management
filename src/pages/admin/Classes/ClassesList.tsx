@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -30,7 +30,7 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { classAPI } from '../../../services/api';
+import { classAPI } from '../../../services/api.ts';
 
 interface Class {
   _id: string;
@@ -62,11 +62,13 @@ const ClassesList = () => {
     try {
       setLoading(true);
       const response = await classAPI.getAll();
-      setClasses(response.data);
+      console.log('Classes response:', response);
+      setClasses(response.data || []);
       setError(null);
     } catch (err) {
       setError('Failed to fetch classes');
       console.error('Error fetching classes:', err);
+      setClasses([]);
     } finally {
       setLoading(false);
     }
@@ -170,48 +172,56 @@ const ClassesList = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {filteredClasses
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((classItem) => (
-                <TableRow key={classItem._id}>
-                  <TableCell>{classItem.name}</TableCell>
-                  <TableCell>{classItem.description}</TableCell>
-                  <TableCell>{classItem.duration}</TableCell>
-                  <TableCell>{classItem.maxCapacity}</TableCell>
-                  <TableCell>${classItem.price.toFixed(2)}</TableCell>
-                  <TableCell>
-                    {classItem.requiredSkills.map((skill) => (
+            {filteredClasses.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} align="center">
+                  No classes found
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredClasses
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((classItem) => (
+                  <TableRow key={classItem._id}>
+                    <TableCell>{classItem.name}</TableCell>
+                    <TableCell>{classItem.description}</TableCell>
+                    <TableCell>{classItem.duration}</TableCell>
+                    <TableCell>{classItem.maxCapacity}</TableCell>
+                    <TableCell>${classItem.price.toFixed(2)}</TableCell>
+                    <TableCell>
+                      {classItem.requiredSkills?.map((skill) => (
+                        <Chip
+                          key={skill}
+                          label={skill}
+                          size="small"
+                          sx={{ mr: 0.5, mb: 0.5 }}
+                        />
+                      ))}
+                    </TableCell>
+                    <TableCell>
                       <Chip
-                        key={skill}
-                        label={skill}
+                        label={classItem.status}
+                        color={classItem.status === 'active' ? 'success' : 'default'}
                         size="small"
-                        sx={{ mr: 0.5, mb: 0.5 }}
                       />
-                    ))}
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={classItem.status}
-                      color={classItem.status === 'active' ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      color="primary"
-                      onClick={() => navigate(`/admin/classes/edit/${classItem._id}`)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      color="error"
-                      onClick={() => handleDeleteClick(classItem)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell align="right">
+                      <IconButton
+                        color="primary"
+                        onClick={() => navigate(`/admin/classes/edit/${classItem._id}`)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                      <IconButton
+                        color="error"
+                        onClick={() => handleDeleteClick(classItem)}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))
+            )}
           </TableBody>
         </Table>
         <TablePagination

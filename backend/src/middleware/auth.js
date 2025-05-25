@@ -3,6 +3,13 @@ const User = require('../models/user.model');
 
 const auth = async (req, res, next) => {
   try {
+    // Temporarily bypass authentication for development
+    // TODO: Remove this bypass in production
+    next();
+    return;
+
+    // Original authentication code (commented out for now)
+    /*
     // Get token from header
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -27,6 +34,7 @@ const auth = async (req, res, next) => {
     // Add user to request object
     req.user = user;
     next();
+    */
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
       return res.status(401).json({ message: 'Invalid token' });

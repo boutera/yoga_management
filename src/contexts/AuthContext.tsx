@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI } from '../services/api';
+import { authAPI } from '../services/api.ts';
 
 interface User {
   _id: string;
@@ -42,7 +42,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await authAPI.getProfile();
       setUser(response.data);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       setUser(null);
       localStorage.removeItem('token');
       setError(err.response?.data?.message || 'Authentication failed');
@@ -54,13 +54,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (credentials: { email: string; password: string }) => {
     try {
       setLoading(true);
+      console.log('AuthContext: Starting login');
       const response = await authAPI.login(credentials);
-      const { token, user } = response.data;
+      console.log('AuthContext: Login response:', response);
+      const { data } = response;
+      const { token, user } = data;
+      console.log('AuthContext: Setting token and user', { token, user });
       localStorage.setItem('token', token);
       setUser(user);
       setError(null);
       return user;
     } catch (err: any) {
+      console.error('AuthContext: Login error:', err);
       setError(err.response?.data?.message || 'Login failed');
       throw err;
     } finally {

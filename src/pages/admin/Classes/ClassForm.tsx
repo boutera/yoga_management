@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
@@ -17,7 +17,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { classAPI } from '../../../services/api';
+import { classAPI } from '../../../services/api.ts';
 
 interface Class {
   _id: string;
