@@ -1,8 +1,18 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext.tsx';
 
-const ProtectedRoute = ({ children, requireAdmin = false, requireTutor = false }) => {
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requireAdmin?: boolean;
+  requireTutor?: boolean;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+  children, 
+  requireAdmin = false, 
+  requireTutor = false 
+}) => {
   const { isAuthenticated, isAdmin, isTutor, loading } = useAuth();
   const location = useLocation();
 
@@ -25,7 +35,7 @@ const ProtectedRoute = ({ children, requireAdmin = false, requireTutor = false }
     return <Navigate to="/unauthorized" replace />;
   }
 
-  return children;
+  return <>{children}</>;
 };
 
 export default ProtectedRoute; 

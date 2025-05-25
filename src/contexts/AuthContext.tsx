@@ -1,12 +1,32 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { authAPI } from '../services/api';
 
-const AuthContext = createContext(null);
+interface User {
+  _id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'tutor' | 'user';
+  status: 'active' | 'inactive';
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+  error: string | null;
+  login: (credentials: { email: string; password: string }) => Promise<User>;
+  register: (userData: Partial<User>) => Promise<User>;
+  logout: () => Promise<void>;
+  isAuthenticated: boolean;
+  isAdmin: boolean;
+  isTutor: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -31,7 +51,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (credentials) => {
+  const login = async (credentials: { email: string; password: string }) => {
     try {
       setLoading(true);
       const response = await authAPI.login(credentials);
@@ -40,7 +60,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setError(null);
       return user;
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
       throw err;
     } finally {
@@ -48,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const register = async (userData) => {
+  const register = async (userData: Partial<User>) => {
     try {
       setLoading(true);
       const response = await authAPI.register(userData);
@@ -57,7 +77,7 @@ export const AuthProvider = ({ children }) => {
       setUser(user);
       setError(null);
       return user;
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
       throw err;
     } finally {
@@ -76,7 +96,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value: AuthContextType = {
     user,
     loading,
     error,
