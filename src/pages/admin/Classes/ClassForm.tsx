@@ -14,19 +14,21 @@ import {
   Chip,
   OutlinedInput,
   SelectChangeEvent,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
+import { classAPI } from '../../../services/api';
 
-// Mock data - replace with actual API calls later
-const mockClass = {
-  id: '1',
-  name: 'Hatha Yoga',
-  description: 'Traditional yoga practice focusing on physical postures and breathing techniques.',
-  requiredSkills: ['Yoga Certification', 'Meditation Training'],
-  duration: 60,
-  maxCapacity: 20,
-  price: 25.00,
-  status: 'active',
-};
+interface Class {
+  _id: string;
+  name: string;
+  description: string;
+  requiredSkills: string[];
+  duration: number;
+  maxCapacity: number;
+  price: number;
+  status: 'active' | 'inactive';
+}
 
 const availableSkills = [
   'Yoga Certification',
@@ -42,10 +44,12 @@ const ClassForm = () => {
   const { id } = useParams();
   const isEditMode = Boolean(id);
 
-  const [formData, setFormData] = useState({
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState<Omit<Class, '_id'>>({
     name: '',
     description: '',
-    requiredSkills: [] as string[],
+    requiredSkills: [],
     duration: 60,
     maxCapacity: 20,
     price: 0,
@@ -53,11 +57,25 @@ const ClassForm = () => {
   });
 
   useEffect(() => {
-    if (isEditMode) {
-      // TODO: Replace with actual API call
-      setFormData(mockClass);
+    if (isEditMode && id) {
+      fetchClass(id);
     }
-  }, [isEditMode]);
+  }, [isEditMode, id]);
+
+  const fetchClass = async (classId: string) => {
+    try {
+      setLoading(true);
+      const response = await classAPI.getById(classId);
+      const { _id, ...classData } = response.data;
+      setFormData(classData);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch class details');
+      console.error('Error fetching class:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleTextChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -85,18 +103,43 @@ const ClassForm = () => {
     }));
   };
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    // TODO: Implement save functionality
-    console.log('Saving class:', formData);
-    navigate('/admin/classes');
+    try {
+      setLoading(true);
+      if (isEditMode && id) {
+        await classAPI.update(id, formData);
+      } else {
+        await classAPI.create(formData);
+      }
+      navigate('/admin/classes');
+    } catch (err) {
+      setError('Failed to save class');
+      console.error('Error saving class:', err);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading && isEditMode) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
         {isEditMode ? 'Edit Class' : 'Add New Class'}
       </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Paper sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
@@ -109,6 +152,7 @@ const ClassForm = () => {
                 value={formData.name}
                 onChange={handleTextChange}
                 required
+                disabled={loading}
               />
             </Grid>
 
@@ -122,6 +166,7 @@ const ClassForm = () => {
                 multiline
                 rows={4}
                 required
+                disabled={loading}
               />
             </Grid>
 
@@ -140,6 +185,7 @@ const ClassForm = () => {
                       ))}
                     </Box>
                   )}
+                  disabled={loading}
                 >
                   {availableSkills.map((skill) => (
                     <MenuItem key={skill} value={skill}>
@@ -160,6 +206,7 @@ const ClassForm = () => {
                 onChange={handleTextChange}
                 required
                 inputProps={{ min: 15, step: 15 }}
+                disabled={loading}
               />
             </Grid>
 
@@ -173,6 +220,7 @@ const ClassForm = () => {
                 onChange={handleTextChange}
                 required
                 inputProps={{ min: 1 }}
+                disabled={loading}
               />
             </Grid>
 
@@ -189,6 +237,7 @@ const ClassForm = () => {
                 InputProps={{
                   startAdornment: '$',
                 }}
+                disabled={loading}
               />
             </Grid>
 
@@ -200,6 +249,7 @@ const ClassForm = () => {
                   value={formData.status}
                   onChange={handleSelectChange}
                   label="Status"
+                  disabled={loading}
                 >
                   <MenuItem value="active">Active</MenuItem>
                   <MenuItem value="inactive">Inactive</MenuItem>
@@ -212,12 +262,14 @@ const ClassForm = () => {
                 <Button
                   variant="outlined"
                   onClick={() => navigate('/admin/classes')}
+                  disabled={loading}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   variant="contained"
+                  disabled={loading}
                 >
                   {isEditMode ? 'Save Changes' : 'Create Class'}
                 </Button>

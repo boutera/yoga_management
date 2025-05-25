@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
@@ -20,6 +20,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -28,48 +30,47 @@ import {
   Search as SearchIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { classAPI } from '../../../services/api';
 
-// Mock data - replace with actual API calls later
-const mockClasses = [
-  {
-    id: '1',
-    name: 'Hatha Yoga',
-    description: 'Traditional yoga practice focusing on physical postures and breathing techniques.',
-    requiredSkills: ['Yoga Certification', 'Meditation Training'],
-    duration: 60,
-    maxCapacity: 20,
-    price: 25.00,
-    status: 'active',
-  },
-  {
-    id: '2',
-    name: 'Meditation',
-    description: 'Guided meditation sessions for stress relief and mental clarity.',
-    requiredSkills: ['Meditation Certification'],
-    duration: 45,
-    maxCapacity: 15,
-    price: 20.00,
-    status: 'active',
-  },
-  {
-    id: '3',
-    name: 'Healing Therapy',
-    description: 'Holistic healing sessions combining various therapeutic techniques.',
-    requiredSkills: ['Healing Certification', 'Energy Work'],
-    duration: 90,
-    maxCapacity: 10,
-    price: 50.00,
-    status: 'inactive',
-  },
-];
+interface Class {
+  _id: string;
+  name: string;
+  description: string;
+  requiredSkills: string[];
+  duration: number;
+  maxCapacity: number;
+  price: number;
+  status: 'active' | 'inactive';
+}
 
 const ClassesList = () => {
   const navigate = useNavigate();
+  const [classes, setClasses] = useState<Class[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [searchQuery, setSearchQuery] = useState('');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedClass, setSelectedClass] = useState<typeof mockClasses[0] | null>(null);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
+
+  useEffect(() => {
+    fetchClasses();
+  }, []);
+
+  const fetchClasses = async () => {
+    try {
+      setLoading(true);
+      const response = await classAPI.getAll();
+      setClasses(response.data);
+      setError(null);
+    } catch (err) {
+      setError('Failed to fetch classes');
+      console.error('Error fetching classes:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -85,22 +86,37 @@ const ClassesList = () => {
     setPage(0);
   };
 
-  const handleDeleteClick = (classItem: typeof mockClasses[0]) => {
+  const handleDeleteClick = (classItem: Class) => {
     setSelectedClass(classItem);
     setDeleteDialogOpen(true);
   };
 
-  const handleDeleteConfirm = () => {
-    // TODO: Implement delete functionality
-    console.log('Deleting class:', selectedClass?.id);
-    setDeleteDialogOpen(false);
-    setSelectedClass(null);
+  const handleDeleteConfirm = async () => {
+    if (!selectedClass) return;
+
+    try {
+      await classAPI.delete(selectedClass._id);
+      await fetchClasses(); // Refresh the list
+      setDeleteDialogOpen(false);
+      setSelectedClass(null);
+    } catch (err) {
+      setError('Failed to delete class');
+      console.error('Error deleting class:', err);
+    }
   };
 
-  const filteredClasses = mockClasses.filter((classItem) =>
+  const filteredClasses = classes.filter((classItem) =>
     classItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     classItem.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
     <Box>
@@ -114,6 +130,12 @@ const ClassesList = () => {
           Add New Class
         </Button>
       </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Paper sx={{ mb: 3 }}>
         <TextField
@@ -151,7 +173,7 @@ const ClassesList = () => {
             {filteredClasses
               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
               .map((classItem) => (
-                <TableRow key={classItem.id}>
+                <TableRow key={classItem._id}>
                   <TableCell>{classItem.name}</TableCell>
                   <TableCell>{classItem.description}</TableCell>
                   <TableCell>{classItem.duration}</TableCell>
@@ -177,7 +199,7 @@ const ClassesList = () => {
                   <TableCell align="right">
                     <IconButton
                       color="primary"
-                      onClick={() => navigate(`/admin/classes/edit/${classItem.id}`)}
+                      onClick={() => navigate(`/admin/classes/edit/${classItem._id}`)}
                     >
                       <EditIcon />
                     </IconButton>
