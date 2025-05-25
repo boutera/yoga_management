@@ -54,6 +54,7 @@ interface TutorReport {
   bySpecialty: Record<string, number>;
   classDistribution: Record<string, number>;
   ratingDistribution: Record<string, number>;
+  studentDistribution: Record<string, number>;
 }
 
 const Reports = () => {
@@ -296,25 +297,23 @@ const Reports = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Tutor</TableCell>
-                      <TableCell align="right">Classes</TableCell>
+                      <TableCell align="right">Active Classes</TableCell>
                       <TableCell align="right">Students</TableCell>
                       <TableCell align="right">Rating</TableCell>
-                      <TableCell align="right">Revenue</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {tutorData?.classDistribution && Object.entries(tutorData.classDistribution).map(([tutorName, classes]) => (
-                      <TableRow key={tutorName}>
-                        <TableCell>{tutorName}</TableCell>
+                    {tutorData?.classDistribution && Object.entries(tutorData.classDistribution).map(([tutor, classes]) => (
+                      <TableRow key={tutor}>
+                        <TableCell component="th" scope="row">
+                          {tutor}
+                        </TableCell>
                         <TableCell align="right">{classes}</TableCell>
                         <TableCell align="right">
-                          {bookingData?.byTutor?.[tutorName] || 0}
+                          {tutorData?.studentDistribution?.[tutor] || 0}
                         </TableCell>
                         <TableCell align="right">
-                          {tutorData?.ratingDistribution?.[tutorName] || 'N/A'}
-                        </TableCell>
-                        <TableCell align="right">
-                          ${revenueData?.byTutor?.[tutorName]?.toLocaleString() || 0}
+                          {tutorData?.ratingDistribution?.[tutor]?.toFixed(1) || 'N/A'}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -344,7 +343,7 @@ const Reports = () => {
                   <TableCell>Location</TableCell>
                   <TableCell align="right">Total Revenue</TableCell>
                   <TableCell align="right">Total Bookings</TableCell>
-                  <TableCell align="right">Average Attendance</TableCell>
+                  <TableCell align="right">Active Classes</TableCell>
                   <TableCell align="right">Utilization Rate</TableCell>
                 </TableRow>
               </TableHead>
@@ -355,13 +354,13 @@ const Reports = () => {
                       {locationName}
                     </TableCell>
                     <TableCell align="right">
-                      ${revenueData?.byLocation?.[locationName]?.toLocaleString() || 0}
+                      ${locationData?.revenueDistribution?.[locationName]?.toLocaleString() || 0}
                     </TableCell>
                     <TableCell align="right">
-                      {bookingData?.byLocation?.[locationName] || 0}
+                      {locationData?.bookingDistribution?.[locationName] || 0}
                     </TableCell>
                     <TableCell align="right">
-                      {attendanceData?.byLocation?.[locationName]?.present || 0}%
+                      {classes}
                     </TableCell>
                     <TableCell align="right">
                       {locationData?.capacityUtilization?.[locationName]?.utilizationRate || 0}%

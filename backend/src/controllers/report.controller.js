@@ -230,12 +230,21 @@ exports.getTutorReport = async (req, res) => {
       .populate('tutor', 'name')
       .select('-__v');
 
+    // Get all bookings for these classes
+    const bookings = await Booking.find({
+      class: { $in: classes.map(c => c._id) },
+      status: { $in: ['confirmed', 'completed'] }  // Only count confirmed and completed bookings
+    })
+      .populate('class', 'tutor')
+      .select('-__v');
+
     const report = {
       totalTutors: tutors.length,
       byStatus: {},
       bySpecialty: {},
       classDistribution: {},
-      ratingDistribution: {}
+      ratingDistribution: {},
+      studentDistribution: {}  // Add student count by tutor
     };
 
     tutors.forEach(tutor => {
@@ -251,6 +260,11 @@ exports.getTutorReport = async (req, res) => {
       const tutorClasses = classes.filter(c => c.tutor._id.toString() === tutor._id.toString());
       report.classDistribution[tutor.name] = tutorClasses.length;
 
+      // Count students (bookings) for this tutor
+      const tutorClassIds = tutorClasses.map(c => c._id.toString());
+      const tutorBookings = bookings.filter(b => tutorClassIds.includes(b.class._id.toString()));
+      report.studentDistribution[tutor.name] = tutorBookings.length;
+
       // Store rating by tutor name
       report.ratingDistribution[tutor.name] = tutor.rating;
     });
@@ -264,17 +278,21 @@ exports.getTutorReport = async (req, res) => {
 // Get location report
 exports.getLocationReport = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    const query = {
-      createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      }
-    };
-
-    const locations = await Location.find(query).select('-__v');
-    const classes = await Class.find({ location: { $in: locations.map(l => l._id) } })
+    // Get all locations
+    const locations = await Location.find().select('-__v');
+    const classes = await Class.find({ 
+      location: { $in: locations.map(l => l._id) },
+      status: 'active'
+    })
       .populate('location', 'name')
+      .select('-__v');
+
+    // Get all bookings for these classes
+    const bookings = await Booking.find({
+      class: { $in: classes.map(c => c._id) },
+      status: { $in: ['confirmed', 'completed'] }
+    })
+      .populate('class', 'location')
       .select('-__v');
 
     const report = {
@@ -282,7 +300,9 @@ exports.getLocationReport = async (req, res) => {
       byStatus: {},
       byCity: {},
       classDistribution: {},
-      capacityUtilization: {}
+      capacityUtilization: {},
+      bookingDistribution: {},  // Add booking count by location
+      revenueDistribution: {}   // Add revenue by location
     };
 
     locations.forEach(location => {
@@ -292,14 +312,24 @@ exports.getLocationReport = async (req, res) => {
       // Count by city
       report.byCity[location.address.city] = (report.byCity[location.address.city] || 0) + 1;
 
-      // Count classes
+      // Count active classes
       const locationClasses = classes.filter(c => c.location._id.toString() === location._id.toString());
       report.classDistribution[location.name] = locationClasses.length;
+
+      // Count bookings and calculate revenue for this location
+      const locationClassIds = locationClasses.map(c => c._id.toString());
+      const locationBookings = bookings.filter(b => locationClassIds.includes(b.class._id.toString()));
+      report.bookingDistribution[location.name] = locationBookings.length;
+      
+      // Calculate total revenue for this location
+      const locationRevenue = locationBookings.reduce((sum, booking) => sum + (booking.paymentAmount || 0), 0);
+      report.revenueDistribution[location.name] = locationRevenue;
 
       // Calculate capacity utilization
       report.capacityUtilization[location.name] = {
         totalCapacity: location.capacity,
-        classesCount: locationClasses.length
+        classesCount: locationClasses.length,
+        utilizationRate: Math.round((locationClasses.length / location.capacity) * 100)
       };
     });
 
