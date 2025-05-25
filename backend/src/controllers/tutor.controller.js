@@ -28,9 +28,15 @@ exports.getTutors = async (req, res) => {
       .select('-__v')
       .sort({ name: 1 });
 
-    res.json(tutors);
+    res.json({
+      success: true,
+      data: tutors
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -38,17 +44,29 @@ exports.getTutors = async (req, res) => {
 exports.getTutorById = async (req, res) => {
   try {
     if (!validateObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid tutor ID' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tutor ID'
+      });
     }
 
     const tutor = await Tutor.findById(req.params.id).select('-__v');
     if (!tutor) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Tutor not found'
+      });
     }
 
-    res.json(tutor);
+    res.json({
+      success: true,
+      data: tutor
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -57,9 +75,15 @@ exports.createTutor = async (req, res) => {
   try {
     const tutor = new Tutor(req.body);
     await tutor.save();
-    res.status(201).json(tutor);
+    res.status(201).json({
+      success: true,
+      data: tutor
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -67,7 +91,10 @@ exports.createTutor = async (req, res) => {
 exports.updateTutor = async (req, res) => {
   try {
     if (!validateObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid tutor ID' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tutor ID'
+      });
     }
 
     const tutor = await Tutor.findByIdAndUpdate(
@@ -77,12 +104,21 @@ exports.updateTutor = async (req, res) => {
     ).select('-__v');
 
     if (!tutor) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Tutor not found'
+      });
     }
 
-    res.json(tutor);
+    res.json({
+      success: true,
+      data: tutor
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -90,21 +126,33 @@ exports.updateTutor = async (req, res) => {
 exports.deleteTutor = async (req, res) => {
   try {
     if (!validateObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid tutor ID' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tutor ID'
+      });
     }
 
     const tutor = await Tutor.findByIdAndDelete(req.params.id);
     if (!tutor) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Tutor not found'
+      });
     }
 
     // Also delete associated classes and bookings
     await Class.deleteMany({ tutor: req.params.id });
     await Booking.deleteMany({ tutor: req.params.id });
 
-    res.json({ message: 'Tutor deleted successfully' });
+    res.json({
+      success: true,
+      message: 'Tutor deleted successfully'
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -119,9 +167,15 @@ exports.getAvailableTutors = async (req, res) => {
       [`availability.${dayOfWeek}`]: { $exists: true, $ne: [] }
     }).select('-__v');
 
-    res.json(tutors);
+    res.json({
+      success: true,
+      data: tutors
+    });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -129,7 +183,10 @@ exports.getAvailableTutors = async (req, res) => {
 exports.updateTutorStatus = async (req, res) => {
   try {
     if (!validateObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid tutor ID' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tutor ID'
+      });
     }
 
     const tutor = await Tutor.findByIdAndUpdate(
@@ -139,12 +196,21 @@ exports.updateTutorStatus = async (req, res) => {
     ).select('-__v');
 
     if (!tutor) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Tutor not found'
+      });
     }
 
-    res.json(tutor);
+    res.json({
+      success: true,
+      data: tutor
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -152,12 +218,18 @@ exports.updateTutorStatus = async (req, res) => {
 exports.getTutorSchedule = async (req, res) => {
   try {
     if (!validateObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid tutor ID' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tutor ID'
+      });
     }
 
     const tutor = await Tutor.findById(req.params.id);
     if (!tutor) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Tutor not found'
+      });
     }
 
     const classes = await Class.find({ tutor: req.params.id })
@@ -165,11 +237,17 @@ exports.getTutorSchedule = async (req, res) => {
       .select('-__v');
 
     res.json({
-      availability: tutor.availability,
-      classes
+      success: true,
+      data: {
+        availability: tutor.availability,
+        classes
+      }
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
@@ -177,7 +255,10 @@ exports.getTutorSchedule = async (req, res) => {
 exports.updateTutorAvailability = async (req, res) => {
   try {
     if (!validateObjectId(req.params.id)) {
-      return res.status(400).json({ message: 'Invalid tutor ID' });
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tutor ID'
+      });
     }
 
     const tutor = await Tutor.findByIdAndUpdate(
@@ -187,11 +268,20 @@ exports.updateTutorAvailability = async (req, res) => {
     ).select('-__v');
 
     if (!tutor) {
-      return res.status(404).json({ message: 'Tutor not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'Tutor not found'
+      });
     }
 
-    res.json(tutor);
+    res.json({
+      success: true,
+      data: tutor
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
   }
 }; 
