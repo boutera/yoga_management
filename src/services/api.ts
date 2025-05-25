@@ -9,18 +9,14 @@ const api = axios.create({
   },
 });
 
-// Request interceptor for adding auth token (temporarily disabled)
+// Request interceptor for adding auth token
 api.interceptors.request.use(
   (config) => {
-    // Temporarily bypass token requirement
-    return config;
-    /*
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
-    */
   },
   (error) => {
     return Promise.reject(error);
@@ -31,15 +27,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // Temporarily bypass 401 handling
-    return Promise.reject(error);
-    /*
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
       window.location.href = '/login';
     }
     return Promise.reject(error);
-    */
   }
 );
 
@@ -59,7 +51,7 @@ export const authAPI = {
   },
   register: (userData: any) => api.post('/auth/register', userData).then(response => response.data),
   logout: () => api.post('/auth/logout').then(response => response.data),
-  getProfile: () => api.get('/auth/profile').then(response => response.data),
+  getProfile: () => api.get('/auth/me').then(response => response.data),
 };
 
 // User API

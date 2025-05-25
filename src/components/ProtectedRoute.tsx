@@ -1,41 +1,37 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext.tsx';
+import { useAuth } from '../contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requireAdmin?: boolean;
-  requireTutor?: boolean;
+  requiredRole?: 'admin' | 'tutor' | 'user';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requireAdmin = false, 
-  requireTutor = false 
+  requiredRole 
 }) => {
-  const { isAuthenticated, isAdmin, isTutor, loading } = useAuth();
+  const { user, loading, isAuthenticated } = useAuth();
   const location = useLocation();
 
   if (loading) {
-    return <div>Loading...</div>;
+    return <div>Loading...</div>; // Or your loading component
   }
 
   if (!isAuthenticated) {
-    // Redirect to login page if not authenticated
+    // Redirect to login page but save the attempted url
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  if (requireAdmin && !isAdmin) {
-    // Redirect to unauthorized page if user is not an admin
-    return <Navigate to="/unauthorized" replace />;
-  }
-
-  if (requireTutor && !isTutor) {
-    // Redirect to unauthorized page if user is not a tutor
-    return <Navigate to="/unauthorized" replace />;
+  if (requiredRole && user?.role !== requiredRole) {
+    // Redirect to appropriate dashboard based on role
+    const redirectPath = user?.role === 'admin' 
+      ? '/admin/dashboard' 
+      : user?.role === 'tutor' 
+        ? '/tutor/dashboard' 
+        : '/dashboard';
+    return <Navigate to={redirectPath} replace />;
   }
 
   return <>{children}</>;
-};
-
-export default ProtectedRoute; 
+}; 

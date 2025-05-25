@@ -14,6 +14,7 @@ import {
   ListItemText,
   useTheme,
   useMediaQuery,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
@@ -24,8 +25,10 @@ import {
   EventNote as EventIcon,
   Assessment as AssessmentIcon,
   ChevronLeft as ChevronLeftIcon,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
@@ -44,6 +47,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout } = useAuth();
 
   const handleDrawerToggle = () => {
     setOpen(!open);
@@ -72,9 +76,16 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
+          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
             Yoga Center Admin
           </Typography>
+          <Button
+            color="inherit"
+            startIcon={<LogoutIcon />}
+            onClick={logout}
+          >
+            Sign Out
+          </Button>
         </Toolbar>
       </AppBar>
 

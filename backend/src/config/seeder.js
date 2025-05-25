@@ -13,7 +13,8 @@ const users = [
     name: 'Admin User',
     email: 'admin@yoga.com',
     password: 'admin123',
-    role: 'admin'
+    role: 'admin',
+    isActive: true
   },
   {
     name: 'John Doe',
@@ -374,8 +375,9 @@ const seedData = async () => {
     // Create users
     const createdUsers = await Promise.all(
       users.map(async (user) => {
-        const hashedPassword = await bcrypt.hash(user.password, 10);
-        return User.create({ ...user, password: hashedPassword });
+        const newUser = new User(user);
+        await newUser.save(); // This will trigger the password hashing middleware
+        return newUser;
       })
     );
     console.log('Users Created');

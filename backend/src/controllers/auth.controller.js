@@ -61,31 +61,12 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('Login attempt for:', email);
 
-    // Temporarily bypass all validation for development
-    // TODO: Remove this bypass in production
-    const user = {
-      _id: '1',
-      name: 'Admin User',
-      email: email,
-      role: 'admin',
-      status: 'active'
-    };
-    const token = 'dummy-token';
-
-    res.json({
-      success: true,
-      data: {
-        user,
-        token
-      }
-    });
-    return;
-
-    // Original login code (commented out for now)
-    /*
+    // Validate input
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
@@ -95,6 +76,7 @@ exports.login = async (req, res) => {
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('User not found:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -103,6 +85,7 @@ exports.login = async (req, res) => {
 
     // Check if user is active
     if (!user.isActive) {
+      console.log('User account inactive:', email);
       return res.status(401).json({
         success: false,
         message: 'Account is inactive'
@@ -111,7 +94,9 @@ exports.login = async (req, res) => {
 
     // Check password
     const isMatch = await user.comparePassword(password);
+    console.log('Password match:', isMatch);
     if (!isMatch) {
+      console.log('Invalid password for:', email);
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
@@ -120,21 +105,23 @@ exports.login = async (req, res) => {
 
     // Generate token
     const token = user.generateAuthToken();
+    console.log('Login successful for:', email);
 
     res.json({
       success: true,
       data: {
         user: {
-          id: user._id,
+          _id: user._id,
           name: user.name,
           email: user.email,
-          role: user.role
+          role: user.role,
+          status: user.isActive ? 'active' : 'inactive'
         },
         token
       }
     });
-    */
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
       message: 'Error in login',

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { useAuth } from './contexts/AuthContext.tsx';
-import ProtectedRoute from './components/ProtectedRoute';
+import { useAuth } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
 
 // Auth Pages
@@ -30,7 +30,7 @@ const AppRoutes = () => {
 
       {/* Protected Admin Routes */}
       <Route path="/admin/*" element={
-        <ProtectedRoute requireAdmin>
+        <ProtectedRoute requiredRole="admin">
           <AdminLayout>
             <Routes>
               <Route path="dashboard" element={<Dashboard />} />

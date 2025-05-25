@@ -10,7 +10,7 @@ import {
   CircularProgress,
   Container,
 } from '@mui/material'; 
-import { useAuth } from '../../contexts/AuthContext.tsx';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ const Login = () => {
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       [name]: value,
     }));
@@ -37,12 +37,7 @@ const Login = () => {
       setLoading(true);
       setError(null);
       console.log('Attempting login with:', formData);
-      const user = await login(formData);
-      console.log('Login successful, user:', user);
-      // Redirect to the page they tried to visit or dashboard
-      const from = (location.state as any)?.from?.pathname || '/admin/dashboard';
-      console.log('Redirecting to:', from);
-      navigate(from, { replace: true });
+      await login(formData.email, formData.password);
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.response?.data?.message || 'Failed to login');

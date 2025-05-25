@@ -1,124 +1,103 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import { authAPI } from '../services/api.ts';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from '../services/api';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface User {
   _id: string;
-  email: string;
   name: string;
+  email: string;
   role: 'admin' | 'tutor' | 'user';
-  status: 'active' | 'inactive';
+  isActive: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  error: string | null;
-  login: (credentials: { email: string; password: string }) => Promise<User>;
-  register: (userData: Partial<User>) => Promise<User>;
-  logout: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
   isAuthenticated: boolean;
-  isAdmin: boolean;
-  isTutor: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
 
+  // Check for existing token and validate it on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      checkAuth();
-    } else {
+    const checkAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const response = await authAPI.getProfile();
+          setUser(response.data);
+        } catch (error) {
+          console.error('Auth check failed:', error);
+          localStorage.removeItem('token');
+          setUser(null);
+        }
+      }
       setLoading(false);
-    }
+    };
+
+    checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const login = async (email: string, password: string) => {
     try {
-      const response = await authAPI.getProfile();
-      setUser(response.data);
-      setError(null);
-    } catch (err: any) {
-      setUser(null);
-      localStorage.removeItem('token');
-      setError(err.response?.data?.message || 'Authentication failed');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const login = async (credentials: { email: string; password: string }) => {
-    try {
-      setLoading(true);
-      console.log('AuthContext: Starting login');
-      const response = await authAPI.login(credentials);
-      console.log('AuthContext: Login response:', response);
+      const response = await authAPI.login({ email, password });
+      console.log('Login response:', response);
+      
+      // Extract token and user from the response
       const { data } = response;
       const { token, user } = data;
-      console.log('AuthContext: Setting token and user', { token, user });
+      
       localStorage.setItem('token', token);
       setUser(user);
-      setError(null);
-      return user;
-    } catch (err: any) {
-      console.error('AuthContext: Login error:', err);
-      setError(err.response?.data?.message || 'Login failed');
-      throw err;
-    } finally {
-      setLoading(false);
+
+      // Get the redirect path from location state or use default based on role
+      const from = (location.state as any)?.from?.pathname || 
+        (user.role === 'admin' 
+          ? '/admin/dashboard' 
+          : user.role === 'tutor' 
+            ? '/tutor/dashboard' 
+            : '/dashboard');
+      
+      console.log('Redirecting to:', from);
+      navigate(from, { replace: true });
+    } catch (error) {
+      console.error('Login failed:', error);
+      throw error;
     }
   };
 
-  const register = async (userData: Partial<User>) => {
-    try {
-      setLoading(true);
-      const response = await authAPI.register(userData);
-      const { token, user } = response.data;
-      localStorage.setItem('token', token);
-      setUser(user);
-      setError(null);
-      return user;
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+    navigate('/login', { replace: true });
   };
 
-  const logout = async () => {
-    try {
-      await authAPI.logout();
-    } catch (err) {
-      console.error('Logout error:', err);
-    } finally {
-      localStorage.removeItem('token');
-      setUser(null);
-    }
-  };
-
-  const value: AuthContextType = {
+  const value = {
     user,
     loading,
-    error,
     login,
-    register,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
-    isTutor: user?.role === 'tutor',
   };
+
+  if (loading) {
+    return <div>Loading...</div>; // Or your loading component
+  }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
