@@ -18,6 +18,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  Paper,
 } from '@mui/material';
 import {
   MoreVert as MoreVertIcon,
@@ -111,13 +112,49 @@ const mockClassDistribution = [
   { name: 'Yin Yoga', value: 5 },
 ];
 
+// Location-specific data
+const mockLocations = [
+  { id: '1', name: 'Downtown Studio' },
+  { id: '2', name: 'Westside Center' },
+  { id: '3', name: 'Eastside Hub' },
+];
+
+const mockLocationPerformance = [
+  {
+    location: 'Downtown Studio',
+    totalRevenue: 16060,
+    totalBookings: 1040,
+    averageAttendance: 173,
+    utilizationRate: '85%',
+  },
+  {
+    location: 'Westside Center',
+    totalRevenue: 15540,
+    totalBookings: 949,
+    averageAttendance: 158,
+    utilizationRate: '82%',
+  },
+  {
+    location: 'Eastside Hub',
+    totalRevenue: 14950,
+    totalBookings: 919,
+    averageAttendance: 153,
+    utilizationRate: '80%',
+  },
+];
+
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState('month');
+  const [selectedLocation, setSelectedLocation] = useState('all');
 
   const handleTimeRangeChange = (event: SelectChangeEvent) => {
     setTimeRange(event.target.value);
+  };
+
+  const handleLocationChange = (event: SelectChangeEvent) => {
+    setSelectedLocation(event.target.value);
   };
 
   const getDateRange = () => {
@@ -152,6 +189,21 @@ const Reports = () => {
               <MenuItem value="month">Last 30 days</MenuItem>
               <MenuItem value="quarter">Last 3 months</MenuItem>
               <MenuItem value="year">Last 12 months</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl sx={{ minWidth: 120 }}>
+            <InputLabel>Location</InputLabel>
+            <Select
+              value={selectedLocation}
+              label="Location"
+              onChange={handleLocationChange}
+            >
+              <MenuItem value="all">All Locations</MenuItem>
+              {mockLocations.map((location) => (
+                <MenuItem key={location.id} value={location.id}>
+                  {location.name}
+                </MenuItem>
+              ))}
             </Select>
           </FormControl>
         </Box>
@@ -326,7 +378,7 @@ const Reports = () => {
       </Grid>
 
       {/* Revenue by Class and Tutor Performance */}
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} md={6}>
           <Card>
             <CardHeader
@@ -401,6 +453,54 @@ const Reports = () => {
           </Card>
         </Grid>
       </Grid>
+
+      {/* Location Performance Section */}
+      <Card>
+        <CardHeader
+          title="Location Performance"
+          action={
+            <IconButton>
+              <MoreVertIcon />
+            </IconButton>
+          }
+        />
+        <CardContent>
+          <TableContainer component={Paper}>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Location</TableCell>
+                  <TableCell align="right">Total Revenue</TableCell>
+                  <TableCell align="right">Total Bookings</TableCell>
+                  <TableCell align="right">Average Attendance</TableCell>
+                  <TableCell align="right">Utilization Rate</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {mockLocationPerformance.map((location) => (
+                  <TableRow key={location.location}>
+                    <TableCell component="th" scope="row">
+                      {location.location}
+                    </TableCell>
+                    <TableCell align="right">
+                      ${location.totalRevenue.toLocaleString()}
+                    </TableCell>
+                    <TableCell align="right">
+                      {location.totalBookings.toLocaleString()}
+                    </TableCell>
+                    <TableCell align="right">
+                      {location.averageAttendance}
+                    </TableCell>
+                    <TableCell align="right">
+                      {location.utilizationRate}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </CardContent>
+      </Card>
     </Box>
   );
 };
