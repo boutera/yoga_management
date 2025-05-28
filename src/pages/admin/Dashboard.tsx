@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Box,
   Grid,
@@ -8,6 +9,8 @@ import {
   CardHeader,
   IconButton,
   Button,
+  CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -17,6 +20,8 @@ import {
   Add as AddIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import { format, startOfDay, endOfDay } from 'date-fns';
+import { reportAPI } from '../../services/api';
 
 const StatCard = ({
   title,
@@ -89,33 +94,38 @@ const QuickActionCard = ({
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
 
-  const stats = [
-    {
-      title: 'Total Tutors',
-      value: 24,
-      icon: <PeopleIcon sx={{ color: '#2196f3' }} />,
-      color: '#2196f3',
-    },
-    {
-      title: 'Active Classes',
-      value: 12,
-      icon: <ClassIcon sx={{ color: '#4caf50' }} />,
-      color: '#4caf50',
-    },
-    {
-      title: 'Today\'s Bookings',
-      value: 45,
-      icon: <EventIcon sx={{ color: '#ff9800' }} />,
-      color: '#ff9800',
-    },
-    {
-      title: 'Locations',
-      value: 5,
-      icon: <LocationIcon sx={{ color: '#f44336' }} />,
-      color: '#f44336',
-    },
-  ];
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const today = new Date();
+      const [tutorReport, bookingReport, locationReport] = await Promise.all([
+        reportAPI.getTutorReport(format(startOfDay(today), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
+        reportAPI.getBookingReport(format(startOfDay(today), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
+        reportAPI.getLocationReport(format(startOfDay(today), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
+      ]);
+
+      setDashboardData({
+        tutors: tutorReport,
+        bookings: bookingReport,
+        locations: locationReport,
+      });
+    } catch (err) {
+      setError('Failed to fetch dashboard data. Please try again later.');
+      console.error('Error fetching dashboard data:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const quickActions = [
     {
@@ -135,6 +145,50 @@ const Dashboard = () => {
       description: 'Add a new center location',
       icon: <LocationIcon color="primary" />,
       onClick: () => navigate('/admin/locations/new'),
+    },
+  ];
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
+  const stats = [
+    {
+      title: 'Total Tutors',
+      value: dashboardData?.tutors?.totalTutors || 0,
+      icon: <PeopleIcon sx={{ color: '#2196f3' }} />,
+      color: '#2196f3',
+    },
+    {
+      title: 'Active Classes',
+      value: dashboardData?.tutors?.classDistribution ? 
+        Object.values(dashboardData.tutors.classDistribution).reduce((sum: number, count: unknown) => sum + (count as number), 0) : 0,
+      icon: <ClassIcon sx={{ color: '#4caf50' }} />,
+      color: '#4caf50',
+    },
+    {
+      title: 'Today\'s Bookings',
+      value: dashboardData?.bookings?.totalBookings || 0,
+      icon: <EventIcon sx={{ color: '#ff9800' }} />,
+      color: '#ff9800',
+    },
+    {
+      title: 'Locations',
+      value: dashboardData?.locations?.totalLocations || 0,
+      icon: <LocationIcon sx={{ color: '#f44336' }} />,
+      color: '#f44336',
     },
   ];
 
@@ -171,7 +225,7 @@ const Dashboard = () => {
           Recent Activity
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          No recent activity to display
+          {dashboardData?.bookings?.totalBookings ? `${dashboardData.bookings.totalBookings} bookings today` : 'No recent activity to display'}
         </Typography>
       </Paper>
     </Box>
