@@ -183,7 +183,7 @@ export const bookingAPI = {
   create: (data: any) => api.post('/bookings', data).then(response => response.data),
   update: (id: string, data: any) => api.put(`/bookings/${id}`, data).then(response => response.data),
   delete: (id: string) => api.delete(`/bookings/${id}`).then(response => response.data),
-  getUserBookings: () => api.get('/bookings/user').then(response => response.data),
+  getUserBookings: () => api.get('/bookings/user/bookings').then(response => response.data),
   cancel: (id: string) => api.post(`/bookings/${id}/cancel`).then(response => response.data),
   markAttendance: (id: string, status: string) =>
     api.post(`/bookings/${id}/attendance`, { status }).then(response => response.data),

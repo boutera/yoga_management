@@ -63,6 +63,10 @@ interface Class {
     endTime: string;
   }>;
   status: string;
+  userBooking?: {
+    _id: string;
+    status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
+  };
 }
 
 const Home = () => {
@@ -76,15 +80,23 @@ const Home = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
-  const { user } = useAuth();
+  const [bookingSuccess, setBookingSuccess] = useState<string | null>(null);
   const [bookingError, setBookingError] = useState<string | null>(null);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [bookingLoading, setBookingLoading] = useState(false);
+  const [userBookings, setUserBookings] = useState<Record<string, any>>({});
+  const { user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchFilters, setSearchFilters] = useState({
+    classId: ''
+  });
 
   useEffect(() => {
     fetchClasses();
-  }, []);
+    if (user) {
+      fetchUserBookings();
+    }
+  }, [user]);
 
   const fetchClasses = async () => {
     try {
@@ -98,6 +110,21 @@ const Home = () => {
       setClasses([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserBookings = async () => {
+    try {
+      const response = await bookingAPI.getUserBookings();
+      if (response.success) {
+        const bookingsMap = response.data.reduce((acc: Record<string, any>, booking: any) => {
+          acc[booking.class._id] = booking;
+          return acc;
+        }, {});
+        setUserBookings(bookingsMap);
+      }
+    } catch (err) {
+      console.error('Error fetching user bookings:', err);
     }
   };
 
@@ -119,6 +146,40 @@ const Home = () => {
     }
   };
 
+  const handleSearchFilters = (
+    event: SelectChangeEvent<string>
+  ) => {
+    const { name, value } = event.target;
+    setSearchFilters(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const searchBookings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await bookingAPI.getAll();
+      if (response.success) {
+        // Filter the classes based on search criteria
+        const filteredClasses = response.data.filter((cls: Class) => {
+          const matchesClass = !searchFilters.classId || cls._id === searchFilters.classId;
+          return matchesClass;
+        });
+        setClasses(filteredClasses);
+      } else {
+        setError('Failed to fetch bookings');
+      }
+    } catch (err) {
+      console.error('Error searching bookings:', err);
+      setError('An error occurred while searching bookings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredClasses = (classes || []).filter(cls => {
     if (!cls) return false;
     const matchesSearch = cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -129,64 +190,89 @@ const Home = () => {
     return matchesSearch && matchesCategory && matchesLevel && matchesLocation;
   });
 
-  const handleBookClass = (cls: Class) => {
+  const handleBookClass = (classItem: Class) => {
     if (!user) {
-      navigate('/login', { state: { from: location } });
+      navigate('/login');
       return;
     }
-    setSelectedClass(cls);
+    setSelectedClass(classItem);
     setShowBookingDialog(true);
     setBookingError(null);
-    setBookingSuccess(false);
+    setBookingSuccess(null);
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedClass || !user) return;
+    if (!selectedClass || !user) {
+      setBookingError('Please select a class and ensure you are logged in');
+      return;
+    }
 
     try {
+      setBookingLoading(true);
       setBookingError(null);
-      setBookingSuccess(false);
+      setBookingSuccess(null);
 
-      const today = new Date();
-      const dayOfWeek = selectedClass.schedule[0].dayOfWeek;
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const targetDay = days.indexOf(dayOfWeek);
-      const currentDay = today.getDay();
-      
-      let daysUntilClass = targetDay - currentDay;
-      if (daysUntilClass <= 0) {
-        daysUntilClass += 7;
-      }
-      
-      const bookingDate = new Date(today);
-      bookingDate.setDate(today.getDate() + daysUntilClass);
-      bookingDate.setHours(parseInt(selectedClass.schedule[0].startTime.split(':')[0]), 0, 0, 0);
-
+      // Simplified booking data with default values
       const bookingData = {
         class: selectedClass._id,
         user: user._id,
-        bookingDate: bookingDate.toISOString(),
-        paymentAmount: selectedClass.price,
+        bookingDate: new Date().toISOString(),
+        paymentAmount: selectedClass.price || 0,
         paymentMethod: 'cash',
-        status: 'pending'
+        status: 'pending',
+        paymentStatus: 'pending',
+        attendanceStatus: 'not_checked'
       };
 
+      console.log('Sending booking data:', bookingData);
+
       const response = await bookingAPI.create(bookingData);
+      console.log('Booking response:', response);
 
-      setBookingSuccess(true);
+      setBookingSuccess('Class booked successfully!');
       setShowBookingDialog(false);
-      setSelectedClass(null);
-      fetchClasses();
+      
+      // Refresh both classes and user bookings data
+      await Promise.all([
+        fetchClasses(),
+        fetchUserBookings()
+      ]);
 
-      setTimeout(() => {
-        setBookingSuccess(false);
-      }, 3000);
+    } catch (error: any) {
+      console.error('Booking error:', error);
+      setBookingError('Failed to book class. Please try again.');
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleCancelBooking = async (classId: string) => {
+    try {
+      const booking = userBookings[classId];
+      if (!booking) return;
+
+      const response = await bookingAPI.updateStatus(booking._id, 'cancelled');
+      if (response.success) {
+        // Remove the booking from userBookings to show the Book Now button
+        setUserBookings(prev => {
+          const newBookings = { ...prev };
+          delete newBookings[classId];
+          return newBookings;
+        });
+        
+        // Refresh classes to update the bookedCount
+        await fetchClasses();
+        setBookingSuccess('Booking cancelled successfully');
+      } else {
+        throw new Error(response.message || 'Failed to cancel booking');
+      }
     } catch (err: any) {
-      console.error('Error booking class:', err);
+      console.error('Error cancelling booking:', err);
       setBookingError(
         err.response?.data?.message || 
         err.response?.data?.error || 
-        'Failed to book class. Please try again.'
+        err.message ||
+        'Failed to cancel booking. Please try again.'
       );
     }
   };
@@ -327,7 +413,7 @@ const Home = () => {
       {/* Success Message */}
       {bookingSuccess && (
         <Alert severity="success" sx={{ mb: 2 }}>
-          Class booked successfully! You will receive a confirmation email shortly.
+          {bookingSuccess}
         </Alert>
       )}
 
@@ -398,14 +484,38 @@ const Home = () => {
                   <Typography variant="h6" color="primary">
                     ${cls.price}
                   </Typography>
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleBookClass(cls)}
-                    disabled={(cls.bookedCount || 0) >= cls.capacity}
-                  >
-                    {(cls.bookedCount || 0) >= cls.capacity ? 'Full' : 'Book Now'}
-                  </Button>
+                  {userBookings[cls._id] ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Chip
+                        label={userBookings[cls._id].status.toUpperCase()}
+                        color={
+                          userBookings[cls._id].status === 'confirmed' ? 'success' :
+                          userBookings[cls._id].status === 'pending' ? 'warning' :
+                          'error'
+                        }
+                        size="small"
+                      />
+                      {userBookings[cls._id].status === 'pending' && (
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          size="small"
+                          onClick={() => handleCancelBooking(cls._id)}
+                        >
+                          Cancel
+                        </Button>
+                      )}
+                    </Box>
+                  ) : (
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleBookClass(cls)}
+                      disabled={(cls.bookedCount || 0) >= cls.capacity}
+                    >
+                      {(cls.bookedCount || 0) >= cls.capacity ? 'Full' : 'Book Now'}
+                    </Button>
+                  )}
                 </Box>
               </CardContent>
             </Card>
@@ -414,7 +524,12 @@ const Home = () => {
       </Grid>
 
       {/* Booking Dialog */}
-      <Dialog open={showBookingDialog} onClose={() => setShowBookingDialog(false)}>
+      <Dialog
+        open={showBookingDialog}
+        onClose={() => setShowBookingDialog(false)}
+        maxWidth="sm"
+        fullWidth
+      >
         <DialogTitle>Book Class</DialogTitle>
         <DialogContent>
           {selectedClass && (

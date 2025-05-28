@@ -96,6 +96,28 @@ exports.createBooking = async (req, res) => {
       status
     } = req.body;
 
+    // Check if class exists and has available spots
+    const classData = await Class.findById(classId);
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found'
+      });
+    }
+
+    // Get current number of active bookings for this class
+    const activeBookings = await Booking.countDocuments({
+      class: classId,
+      status: { $in: ['pending', 'confirmed'] }
+    });
+
+    if (activeBookings >= classData.capacity) {
+      return res.status(400).json({
+        success: false,
+        message: 'Class is full'
+      });
+    }
+
     // Create the booking
     const booking = new Booking({
       class: classId,
@@ -107,6 +129,10 @@ exports.createBooking = async (req, res) => {
     });
 
     await booking.save();
+
+    // Update the class's bookedCount
+    classData.bookedCount = activeBookings + 1;
+    await classData.save();
 
     // Populate the booking with class and user information
     const populatedBooking = await Booking.findById(booking._id)
