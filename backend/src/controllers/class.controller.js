@@ -199,4 +199,26 @@ exports.getClassesByLocation = async (req, res) => {
       error: error.message
     });
   }
+};
+
+// Get active classes
+exports.getActiveClasses = async (req, res) => {
+  try {
+    const classes = await Class.find({ status: 'active' })
+      .populate('tutor', 'name email')
+      .populate('location', 'name address')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: classes
+    });
+  } catch (error) {
+    console.error('Error fetching active classes:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching active classes',
+      error: error.message
+    });
+  }
 }; 

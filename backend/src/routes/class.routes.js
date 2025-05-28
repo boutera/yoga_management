@@ -28,6 +28,7 @@ const validateClass = [
 
 // Routes
 router.get('/', auth, classController.getClasses);
+router.get('/active', classController.getActiveClasses);
 
 router.get('/:id', [
   auth,

@@ -2,9 +2,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import AdminLayout from './layouts/AdminLayout';
+import MainLayout from './layouts/MainLayout';
 
 // Auth Pages
 import Login from './pages/auth/Login';
+
+// User Pages
+import Home from './pages/user/Home';
 
 // Admin Pages
 import Dashboard from './pages/admin/Dashboard';
@@ -27,6 +31,13 @@ const AppRoutes = () => {
       {/* Public Routes */}
       <Route path="/login" element={
         isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <Login />
+      } />
+
+      {/* User Routes */}
+      <Route path="/" element={
+        <MainLayout>
+          <Home />
+        </MainLayout>
       } />
 
       {/* Protected Admin Routes */}

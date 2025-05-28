@@ -111,6 +111,21 @@ export const classAPI = {
   delete: (id: string) => api.delete(`/classes/${id}`).then(response => response.data),
   getByTutor: (tutorId: string) => api.get(`/classes/tutor/${tutorId}`).then(response => response.data),
   getByLocation: (locationId: string) => api.get(`/classes/location/${locationId}`).then(response => response.data),
+  getActiveClasses: () => {
+    return api.get('/classes/active').then(response => response.data.data);
+  },
+  getClassById: (id: string) => {
+    return api.get(`/classes/${id}`);
+  },
+  bookClass: (classId: string, data: {
+    bookingDate: string;
+    paymentMethod: string;
+  }) => {
+    return api.post(`/bookings`, {
+      class: classId,
+      ...data
+    });
+  }
 };
 
 // Location API
