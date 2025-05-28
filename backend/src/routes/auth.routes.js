@@ -6,15 +6,8 @@ const auth = require('../middleware/auth');
 
 // Validation middleware
 const validateRegistration = [
-  body('name').trim().notEmpty().withMessage('Name is required'),
-  body('email').isEmail().withMessage('Please enter a valid email'),
-  body('password')
-    .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters long'),
-  body('role')
-    .optional()
-    .isIn(['admin', 'tutor', 'student'])
-    .withMessage('Invalid role')
+  body('firstName').trim().notEmpty().withMessage('First name is required'),
+  body('lastName').trim().notEmpty().withMessage('Last name is required')
 ];
 
 const validateLogin = [

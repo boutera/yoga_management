@@ -49,7 +49,18 @@ export const authAPI = {
         throw error;
       });
   },
-  register: (userData: any) => api.post('/auth/register', userData).then(response => response.data),
+  register: (userData: { firstName: string; lastName: string; email: string; password: string }) => {
+    console.log('API: Making registration request with:', userData);
+    return api.post('/auth/register', userData)
+      .then(response => {
+        console.log('API: Registration response:', response);
+        return response.data;
+      })
+      .catch(error => {
+        console.error('API: Registration error:', error.response?.data || error);
+        throw error;
+      });
+  },
   logout: () => api.post('/auth/logout').then(response => response.data),
   getProfile: () => api.get('/auth/me').then(response => response.data),
 };

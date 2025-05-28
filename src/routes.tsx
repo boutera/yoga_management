@@ -6,6 +6,7 @@ import MainLayout from './layouts/MainLayout';
 
 // Auth Pages
 import Login from './pages/auth/Login';
+import Register from './pages/auth/Register';
 
 // User Pages
 import Home from './pages/user/Home';
@@ -24,13 +25,24 @@ import BookingForm from './pages/admin/Bookings/BookingForm';
 import Reports from './pages/admin/Reports/Reports';
 
 const AppRoutes = () => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   return (
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={
-        isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <Login />
+        isAuthenticated ? (
+          user?.role === 'admin' ? 
+            <Navigate to="/admin/dashboard" replace /> : 
+            <Navigate to="/" replace />
+        ) : <Login />
+      } />
+      <Route path="/register" element={
+        isAuthenticated ? (
+          user?.role === 'admin' ? 
+            <Navigate to="/admin/dashboard" replace /> : 
+            <Navigate to="/" replace />
+        ) : <Register />
       } />
 
       {/* User Routes */}
@@ -75,13 +87,14 @@ const AppRoutes = () => {
         </ProtectedRoute>
       } />
 
-      {/* Redirect root to dashboard if authenticated, otherwise to login */}
-      <Route path="/" element={
-        isAuthenticated ? <Navigate to="/admin/dashboard" replace /> : <Navigate to="/login" replace />
+      {/* Catch all route - redirect based on role */}
+      <Route path="*" element={
+        isAuthenticated ? (
+          user?.role === 'admin' ? 
+            <Navigate to="/admin/dashboard" replace /> : 
+            <Navigate to="/" replace />
+        ) : <Navigate to="/" replace />
       } />
-
-      {/* Catch all route - redirect to dashboard */}
-      <Route path="*" element={<Navigate to="/admin/dashboard" replace />} />
     </Routes>
   );
 };

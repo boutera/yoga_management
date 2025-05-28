@@ -4,19 +4,24 @@ const { validationResult } = require('express-validator');
 // Register a new user
 exports.register = async (req, res) => {
   try {
+    console.log('Registration request body:', req.body);
+    
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         errors: errors.array()
       });
     }
 
-    const { name, email, password, role } = req.body;
+    const { firstName, lastName, email, password } = req.body;
+    console.log('Extracted registration data:', { firstName, lastName, email });
 
     // Check if user already exists
     let user = await User.findOne({ email });
     if (user) {
+      console.log('User already exists:', email);
       return res.status(400).json({
         success: false,
         message: 'User already exists'
@@ -25,13 +30,16 @@ exports.register = async (req, res) => {
 
     // Create new user
     user = new User({
-      name,
+      firstName,
+      lastName,
       email,
       password,
-      role: role || 'student'
+      role: 'user'
     });
 
+    console.log('Attempting to save new user:', { firstName, lastName, email });
     await user.save();
+    console.log('User saved successfully');
 
     // Generate token
     const token = user.generateAuthToken();
@@ -40,8 +48,9 @@ exports.register = async (req, res) => {
       success: true,
       data: {
         user: {
-          id: user._id,
-          name: user.name,
+          _id: user._id,
+          firstName: user.firstName,
+          lastName: user.lastName,
           email: user.email,
           role: user.role
         },
@@ -49,6 +58,7 @@ exports.register = async (req, res) => {
       }
     });
   } catch (error) {
+    console.error('Registration error:', error);
     res.status(500).json({
       success: false,
       message: 'Error in registration',

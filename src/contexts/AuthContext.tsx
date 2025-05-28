@@ -10,10 +10,18 @@ interface User {
   isActive: boolean;
 }
 
+interface RegisterData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+}
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -74,6 +82,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const register = async (data: RegisterData) => {
+    try {
+      const response = await authAPI.register(data);
+      console.log('Register response:', response);
+      
+      // After successful registration, log the user in
+      const loginResponse = await authAPI.login({ email: data.email, password: data.password });
+      const { data: loginData } = loginResponse;
+      const { token, user } = loginData;
+      
+      localStorage.setItem('token', token);
+      setUser(user);
+
+      // Redirect to home page for regular users
+      navigate('/', { replace: true });
+    } catch (error) {
+      console.error('Registration failed:', error);
+      throw error;
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
@@ -84,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     loading,
     login,
+    register,
     logout,
     isAuthenticated: !!user,
   };

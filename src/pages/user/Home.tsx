@@ -22,6 +22,8 @@ import {
   MenuItem,
   Alert,
   CircularProgress,
+  Paper,
+  Divider,
 } from '@mui/material';
 import {
   Search as SearchIcon,
@@ -30,10 +32,13 @@ import {
   Person as PersonIcon,
   Schedule as ScheduleIcon,
   Group as GroupIcon,
+  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { format } from 'date-fns';
-import { classAPI } from '../../services/api';
+import { classAPI, bookingAPI } from '../../services/api';
 import { SelectChangeEvent } from '@mui/material/Select';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 interface Class {
   _id: string;
@@ -71,6 +76,11 @@ const Home = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [showBookingDialog, setShowBookingDialog] = useState(false);
+  const { user } = useAuth();
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     fetchClasses();
@@ -81,11 +91,11 @@ const Home = () => {
       setLoading(true);
       setError(null);
       const response = await classAPI.getActiveClasses();
-      setClasses(response || []); // Ensure we always set an array
+      setClasses(response || []);
     } catch (err) {
       console.error('Error fetching classes:', err);
       setError('Failed to fetch classes. Please try again later.');
-      setClasses([]); // Set empty array on error
+      setClasses([]);
     } finally {
       setLoading(false);
     }
@@ -110,7 +120,7 @@ const Home = () => {
   };
 
   const filteredClasses = (classes || []).filter(cls => {
-    if (!cls) return false; // Skip invalid class objects
+    if (!cls) return false;
     const matchesSearch = cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          cls.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || cls.category === selectedCategory;
@@ -120,20 +130,64 @@ const Home = () => {
   });
 
   const handleBookClass = (cls: Class) => {
+    if (!user) {
+      navigate('/login', { state: { from: location } });
+      return;
+    }
     setSelectedClass(cls);
     setShowBookingDialog(true);
+    setBookingError(null);
+    setBookingSuccess(false);
   };
 
   const handleConfirmBooking = async () => {
-    if (!selectedClass) return;
+    if (!selectedClass || !user) return;
 
     try {
-      // TODO: Implement booking logic
-      console.log('Booking class:', selectedClass._id);
+      setBookingError(null);
+      setBookingSuccess(false);
+
+      const today = new Date();
+      const dayOfWeek = selectedClass.schedule[0].dayOfWeek;
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const targetDay = days.indexOf(dayOfWeek);
+      const currentDay = today.getDay();
+      
+      let daysUntilClass = targetDay - currentDay;
+      if (daysUntilClass <= 0) {
+        daysUntilClass += 7;
+      }
+      
+      const bookingDate = new Date(today);
+      bookingDate.setDate(today.getDate() + daysUntilClass);
+      bookingDate.setHours(parseInt(selectedClass.schedule[0].startTime.split(':')[0]), 0, 0, 0);
+
+      const bookingData = {
+        class: selectedClass._id,
+        user: user._id,
+        bookingDate: bookingDate.toISOString(),
+        paymentAmount: selectedClass.price,
+        paymentMethod: 'cash',
+        status: 'pending'
+      };
+
+      const response = await bookingAPI.create(bookingData);
+
+      setBookingSuccess(true);
       setShowBookingDialog(false);
       setSelectedClass(null);
-    } catch (err) {
+      fetchClasses();
+
+      setTimeout(() => {
+        setBookingSuccess(false);
+      }, 3000);
+    } catch (err: any) {
       console.error('Error booking class:', err);
+      setBookingError(
+        err.response?.data?.message || 
+        err.response?.data?.error || 
+        'Failed to book class. Please try again.'
+      );
     }
   };
 
@@ -155,16 +209,35 @@ const Home = () => {
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      {/* Search and Filter Section */}
-      <Box sx={{ mb: 4 }}>
+      {/* Hero Section */}
+      <Paper 
+        elevation={0}
+        sx={{ 
+          p: 4, 
+          mb: 4, 
+          background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+          color: 'white',
+          borderRadius: 2
+        }}
+      >
+        <Typography variant="h3" component="h1" gutterBottom>
+          Find Your Perfect Yoga Class
+        </Typography>
+        <Typography variant="h6" sx={{ mb: 3 }}>
+          Discover classes that match your style and schedule
+        </Typography>
         <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={8}>
             <TextField
               fullWidth
               variant="outlined"
               placeholder="Search classes..."
               value={searchTerm}
               onChange={handleSearch}
+              sx={{ 
+                backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                borderRadius: 1
+              }}
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
@@ -174,21 +247,30 @@ const Home = () => {
               }}
             />
           </Grid>
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={4}>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<FilterIcon />}
               onClick={() => setShowFilters(!showFilters)}
               fullWidth
+              sx={{ 
+                backgroundColor: 'white',
+                color: '#2196F3',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                }
+              }}
             >
               Filters
             </Button>
           </Grid>
         </Grid>
+      </Paper>
 
-        {/* Filter Options */}
-        {showFilters && (
-          <Grid container spacing={2} sx={{ mt: 2 }}>
+      {/* Filter Options */}
+      {showFilters && (
+        <Paper sx={{ p: 2, mb: 4 }}>
+          <Grid container spacing={2}>
             <Grid item xs={12} md={4}>
               <FormControl fullWidth>
                 <InputLabel>Category</InputLabel>
@@ -239,27 +321,13 @@ const Home = () => {
               </FormControl>
             </Grid>
           </Grid>
-        )}
-      </Box>
-
-      {/* Loading State */}
-      {loading && (
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '200px' }}>
-          <CircularProgress />
-        </Box>
+        </Paper>
       )}
 
-      {/* Error State */}
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-
-      {/* No Classes State */}
-      {!loading && !error && filteredClasses.length === 0 && (
-        <Alert severity="info" sx={{ mb: 2 }}>
-          No classes found matching your criteria.
+      {/* Success Message */}
+      {bookingSuccess && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          Class booked successfully! You will receive a confirmation email shortly.
         </Alert>
       )}
 
@@ -267,10 +335,21 @@ const Home = () => {
       <Grid container spacing={3}>
         {filteredClasses.map((cls) => (
           <Grid item xs={12} sm={6} md={4} key={cls._id}>
-            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Card 
+              sx={{ 
+                height: '100%', 
+                display: 'flex', 
+                flexDirection: 'column',
+                transition: 'transform 0.2s',
+                '&:hover': {
+                  transform: 'translateY(-4px)',
+                  boxShadow: 4
+                }
+              }}
+            >
               <CardMedia
                 component="img"
-                height="140"
+                height="200"
                 image={`/images/classes/${cls.category?.toLowerCase() || 'default'}.jpg`}
                 alt={cls.name}
                 sx={{ objectFit: 'cover' }}
@@ -314,6 +393,7 @@ const Home = () => {
                     {cls.bookedCount || 0}/{cls.capacity} spots filled
                   </Typography>
                 </Box>
+                <Divider sx={{ my: 2 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="h6" color="primary">
                     ${cls.price}
@@ -355,12 +435,23 @@ const Home = () => {
               <Typography variant="body2">
                 <strong>Price:</strong> ${selectedClass.price}
               </Typography>
+
+              {bookingError && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {bookingError}
+                </Alert>
+              )}
             </Box>
           )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowBookingDialog(false)}>Cancel</Button>
-          <Button onClick={handleConfirmBooking} variant="contained" color="primary">
+          <Button 
+            onClick={handleConfirmBooking} 
+            variant="contained" 
+            color="primary"
+            disabled={!selectedClass}
+          >
             Confirm Booking
           </Button>
         </DialogActions>

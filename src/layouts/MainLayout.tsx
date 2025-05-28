@@ -1,13 +1,28 @@
-import { Box, AppBar, Toolbar, Typography, Button, Container, IconButton, Drawer, List, ListItem, ListItemText, useTheme, useMediaQuery } from '@mui/material';
-import { useState } from 'react';
-import { Link as RouterLink } from 'react-router-dom';
+import { Box, AppBar, Toolbar, Typography, Button, Container, IconButton, Drawer, List, ListItem, ListItemText, useTheme, useMediaQuery, Avatar, Tooltip } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import MenuIcon from '@mui/icons-material/Menu';
 import SpaIcon from '@mui/icons-material/Spa';
+import { useAuth } from '../contexts/AuthContext';
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: 'admin' | 'tutor' | 'user';
+  isActive: boolean;
+}
 
 const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log('Auth State:', { isAuthenticated, user });
+  }, [isAuthenticated, user]);
 
   const menuItems = [
     { text: 'Home', path: '/' },
@@ -22,6 +37,14 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
     setMobileOpen(!mobileOpen);
   };
 
+  const handleAuthClick = () => {
+    if (isAuthenticated) {
+      logout();
+    } else {
+      navigate('/login');
+    }
+  };
+
   const drawer = (
     <List>
       {menuItems.map((item) => (
@@ -31,6 +54,9 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
       ))}
     </List>
   );
+
+  const displayName = user?.name || user?.email?.split('@')[0] || 'User';
+  const avatarInitial = displayName[0].toUpperCase();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
@@ -66,8 +92,25 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
             </Box>
           )}
 
-          <Button color="inherit" component={RouterLink} to="/login" sx={{ ml: 2 }}>
-            Login
+          {isAuthenticated && user && (
+            <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+              <Tooltip title={displayName} arrow>
+                <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'secondary.main', cursor: 'pointer' }}>
+                  {avatarInitial}
+                </Avatar>
+              </Tooltip>
+              <Typography variant="body1" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                {displayName}
+              </Typography>
+            </Box>
+          )}
+
+          <Button 
+            color="inherit" 
+            onClick={handleAuthClick}
+            sx={{ ml: 2 }}
+          >
+            {isAuthenticated ? 'Logout' : 'Login'}
           </Button>
         </Toolbar>
       </AppBar>
