@@ -116,7 +116,7 @@ exports.createBooking = async (req, res) => {
 // Update booking status
 exports.updateBookingStatus = async (req, res) => {
   try {
-    const { status } = req.body;
+    const { status, cancellationReason } = req.body;
     const booking = await Booking.findById(req.params.id);
 
     if (!booking) {
@@ -127,7 +127,16 @@ exports.updateBookingStatus = async (req, res) => {
     }
 
     if (status === 'cancelled') {
-      await booking.cancelBooking(req.body.cancellationReason);
+      booking.status = 'cancelled';
+      booking.cancellationReason = cancellationReason;
+      booking.cancellationDate = new Date();
+      booking.paymentStatus = 'refunded';
+      booking.paymentDetails = {
+        ...booking.paymentDetails,
+        refundDate: new Date(),
+        refundAmount: booking.paymentAmount
+      };
+      await booking.save();
     } else if (['present', 'absent'].includes(status)) {
       await booking.markAttendance(status);
     } else {

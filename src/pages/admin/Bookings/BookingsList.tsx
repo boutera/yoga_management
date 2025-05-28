@@ -53,6 +53,7 @@ interface Booking {
     description: string;
     duration: number;
     price: number;
+    capacity: number;
     tutor: {
       _id: string;
       name: string;
@@ -61,12 +62,7 @@ interface Booking {
     location: {
       _id: string;
       name: string;
-      address: {
-        street: string;
-        city: string;
-        state: string;
-        zipCode: string;
-      };
+      address: string;
     };
   };
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show';
@@ -170,9 +166,13 @@ const BookingsList = () => {
     if (!selectedBooking) return;
 
     try {
-      const response = await bookingAPI.delete(selectedBooking._id);
+      const response = await bookingAPI.updateStatus(selectedBooking._id, 'cancelled');
       if (response.success) {
-        setBookings(bookings.filter(b => b._id !== selectedBooking._id));
+        setBookings(prev => prev.map(b => b._id === selectedBooking._id ? { 
+          ...b, 
+          status: 'cancelled',
+          cancellationDate: new Date().toISOString()
+        } : b));
         setDeleteDialogOpen(false);
         setSelectedBooking(null);
       } else {
@@ -186,7 +186,7 @@ const BookingsList = () => {
 
   const handleApprove = async (bookingId: string) => {
     try {
-      const response = await bookingAPI.updateStatus(bookingId, 'confirmed');
+      const response = await bookingAPI.update(bookingId, { status: 'confirmed' });
       if (response.success) {
         setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'confirmed' } : b));
       } else {
@@ -328,6 +328,7 @@ const BookingsList = () => {
           <TableHead>
             <TableRow>
               <TableCell>Class</TableCell>
+              <TableCell>User</TableCell>
               <TableCell>Tutor</TableCell>
               <TableCell>Location</TableCell>
               <TableCell>Date & Time</TableCell>
@@ -360,6 +361,24 @@ const BookingsList = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar 
+                          alt={booking.user?.name || 'User'} 
+                          sx={{ width: 32, height: 32 }}
+                        >
+                          {booking.user?.name?.charAt(0) || 'U'}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body2">
+                            {booking.user?.name || 'Unknown User'}
+                          </Typography>
+                          <Typography variant="caption" color="text.secondary">
+                            {booking.user?.email || 'N/A'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Avatar 
                           alt={booking.class.tutor?.name || 'Tutor'} 
                           sx={{ width: 32, height: 32 }}
                         >
@@ -378,7 +397,7 @@ const BookingsList = () => {
                         {format(new Date(booking.bookingDate), 'MMM d, yyyy')}
                       </Typography>
                       <Typography variant="body2" color="text.secondary">
-                        {`${booking.class.schedule?.[0]?.startTime || 'N/A'} - ${booking.class.schedule?.[0]?.endTime || 'N/A'}`}
+                        {format(new Date(booking.bookingDate), 'HH:mm')}
                       </Typography>
                     </TableCell>
                     <TableCell>

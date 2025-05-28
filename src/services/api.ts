@@ -61,6 +61,10 @@ export const userAPI = {
   getBookings: () => api.get('/users/bookings').then(response => response.data),
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.put('/users/change-password', data).then(response => response.data),
+  getAll: () => api.get('/users').then(response => response.data),
+  getById: (id: string) => api.get(`/users/${id}`).then(response => response.data),
+  update: (id: string, data: any) => api.put(`/users/${id}`, data).then(response => response.data),
+  delete: (id: string) => api.delete(`/users/${id}`).then(response => response.data),
 };
 
 // Class API

@@ -21,7 +21,7 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
-import { bookingAPI, classAPI } from '../../../services/api.ts';
+import { bookingAPI, classAPI, tutorAPI } from '../../../services/api.ts';
 
 interface Class {
   _id: string;
@@ -40,6 +40,12 @@ interface Class {
   };
 }
 
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 const BookingForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -49,9 +55,11 @@ const BookingForm = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
 
   const [formData, setFormData] = useState({
     class: '',
+    user: '',
     date: new Date(),
     startTime: new Date(),
     endTime: new Date(),
@@ -66,27 +74,45 @@ const BookingForm = () => {
   const fetchInitialData = async () => {
     try {
       setLoading(true);
-      const classesRes = await classAPI.getAll();
+      setError(null);
 
-      if (classesRes.success) setClasses(classesRes.data);
+      // Fetch classes
+      const classesResponse = await classAPI.getAll();
+      if (classesResponse.success) {
+        setClasses(classesResponse.data);
+      } else {
+        throw new Error(classesResponse.message || 'Failed to fetch classes');
+      }
 
-      if (isEditMode) {
-        const bookingRes = await bookingAPI.getById(id!);
-        if (bookingRes.success) {
-          const booking = bookingRes.data;
+      // Fetch tutors
+      const tutorsResponse = await tutorAPI.getAll();
+      if (tutorsResponse.success) {
+        setUsers(tutorsResponse.data);
+      } else {
+        throw new Error(tutorsResponse.message || 'Failed to fetch tutors');
+      }
+
+      // If editing, fetch booking data
+      if (id) {
+        const bookingResponse = await bookingAPI.getById(id);
+        if (bookingResponse.success) {
+          const bookingData = bookingResponse.data;
           setFormData({
-            class: booking.class._id,
-            date: parseISO(booking.bookingDate),
-            startTime: parseISO(booking.bookingDate),
-            endTime: new Date(parseISO(booking.bookingDate).getTime() + booking.class.duration * 60000),
-            status: booking.status,
-            price: booking.paymentAmount,
+            class: bookingData.class._id,
+            user: bookingData.user._id,
+            date: bookingData.date,
+            startTime: bookingData.startTime,
+            endTime: bookingData.endTime,
+            status: bookingData.status,
+            price: bookingData.paymentAmount,
           });
+        } else {
+          throw new Error(bookingResponse.message || 'Failed to fetch booking data');
         }
       }
-    } catch (err) {
-      setError('Failed to fetch initial data');
-      console.error('Error fetching initial data:', err);
+    } catch (error: any) {
+      console.error('Error fetching initial data:', error);
+      setError(error.message || 'Failed to fetch initial data');
     } finally {
       setLoading(false);
     }
@@ -118,6 +144,15 @@ const BookingForm = () => {
     }
   };
 
+  const handleUserChange = (event: any, newValue: User | null) => {
+    if (newValue) {
+      setFormData((prev) => ({
+        ...prev,
+        user: newValue._id,
+      }));
+    }
+  };
+
   const handleDateChange = (date: Date | null) => {
     if (date) {
       setFormData((prev) => ({
@@ -144,6 +179,7 @@ const BookingForm = () => {
 
       const bookingData = {
         class: formData.class,
+        user: formData.user,
         bookingDate: format(formData.date, 'yyyy-MM-dd'),
         startTime: format(formData.startTime, 'HH:mm'),
         endTime: format(formData.endTime, 'HH:mm'),
@@ -152,8 +188,8 @@ const BookingForm = () => {
         paymentMethod: 'credit_card', // Default payment method
       };
 
-      if (isEditMode) {
-        await bookingAPI.update(id!, bookingData);
+      if (id) {
+        await bookingAPI.update(id, bookingData);
       } else {
         await bookingAPI.create(bookingData);
       }
@@ -190,7 +226,7 @@ const BookingForm = () => {
       <Paper sx={{ p: 3 }}>
         <form onSubmit={handleSubmit}>
           <Grid container spacing={3}>
-            <Grid item xs={12}>
+            <Grid item xs={12} sm={6}>
               <Autocomplete
                 options={classes}
                 getOptionLabel={(option) => option.name}
@@ -200,6 +236,22 @@ const BookingForm = () => {
                   <TextField
                     {...params}
                     label="Class"
+                    required
+                  />
+                )}
+              />
+            </Grid>
+
+            <Grid item xs={12} sm={6}>
+              <Autocomplete
+                options={users}
+                getOptionLabel={(option) => `${option.name} (${option.email})`}
+                value={users.find(u => u._id === formData.user) || null}
+                onChange={handleUserChange}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="User"
                     required
                   />
                 )}
