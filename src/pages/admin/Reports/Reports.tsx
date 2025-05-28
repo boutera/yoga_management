@@ -335,6 +335,144 @@ const Reports = () => {
           </TableContainer>
         </CardContent>
       </Card>
+
+      {/* Class Distribution Chart */}
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Class Distribution
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={Object.entries(tutorData?.classDistribution || {}).map(([name, count]) => ({
+                name,
+                count
+              }))}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#8884d8" name="Bookings" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Grid>
+
+      {/* Tutor Performance Chart */}
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Tutor Performance
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={Object.entries(tutorData?.classDistribution || {}).map(([name, count]) => ({
+                name,
+                count
+              }))}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#82ca9d" name="Bookings" />
+            </BarChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Grid>
+
+      {/* Daily Booking Trends */}
+      <Grid item xs={12}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Daily Booking Trends
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart
+              data={Object.entries(bookingData?.dailyBookings || {}).map(([date, count]) => ({
+                date,
+                count
+              }))}
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="date" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="count" stroke="#8884d8" name="Bookings" />
+            </LineChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Grid>
+
+      {/* Booking Status Distribution */}
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            Booking Status Distribution
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={Object.entries(bookingData?.byStatus || {}).map(([status, count]) => ({
+                  name: status,
+                  value: count
+                }))}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {Object.entries(bookingData?.byStatus || {}).map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Grid>
+
+      {/* User Statistics */}
+      <Grid item xs={12} md={6}>
+        <Paper sx={{ p: 2 }}>
+          <Typography variant="h6" gutterBottom>
+            User Statistics
+          </Typography>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={[
+                  { name: 'New Users', value: bookingData?.userStats?.newUsers || 0 },
+                  { name: 'Returning Users', value: bookingData?.userStats?.returningUsers || 0 }
+                ]}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                <Cell fill="#8884d8" />
+                <Cell fill="#82ca9d" />
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </Paper>
+      </Grid>
     </Box>
   );
 };
