@@ -16,7 +16,7 @@ exports.getBookingReport = async (req, res) => {
     };
 
     const bookings = await Booking.find(query)
-      .populate('user', 'name email')
+      .populate('user', 'firstName lastName email phoneNumber')
       .populate('class', 'name tutor location')
       .populate('class.tutor', 'name')
       .populate('class.location', 'name')
@@ -28,32 +28,63 @@ exports.getBookingReport = async (req, res) => {
       byClass: {},
       byLocation: {},
       byTutor: {},
-      dailyBookings: {}
+      byPaymentStatus: {},
+      byPaymentMethod: {},
+      dailyBookings: {},
+      userStats: {
+        totalUsers: 0,
+        newUsers: 0,
+        returningUsers: 0
+      }
     };
+
+    const userSet = new Set();
+    const newUserSet = new Set();
 
     bookings.forEach(booking => {
       // Count by status
       report.byStatus[booking.status] = (report.byStatus[booking.status] || 0) + 1;
 
       // Count by class
-      const className = booking.class.name;
+      const className = booking.class?.name || 'Unknown';
       report.byClass[className] = (report.byClass[className] || 0) + 1;
 
       // Count by location
-      const locationName = booking.class.location.name;
+      const locationName = booking.class?.location?.name || 'Unknown';
       report.byLocation[locationName] = (report.byLocation[locationName] || 0) + 1;
 
       // Count by tutor
-      const tutorName = booking.class.tutor.name;
+      const tutorName = booking.class?.tutor?.name || 'Unknown';
       report.byTutor[tutorName] = (report.byTutor[tutorName] || 0) + 1;
+
+      // Count by payment status
+      report.byPaymentStatus[booking.paymentStatus] = (report.byPaymentStatus[booking.paymentStatus] || 0) + 1;
+
+      // Count by payment method
+      if (booking.paymentMethod) {
+        report.byPaymentMethod[booking.paymentMethod] = (report.byPaymentMethod[booking.paymentMethod] || 0) + 1;
+      }
 
       // Count daily bookings
       const date = booking.bookingDate.toISOString().split('T')[0];
       report.dailyBookings[date] = (report.dailyBookings[date] || 0) + 1;
+
+      // Track unique users
+      if (booking.user) {
+        userSet.add(booking.user._id.toString());
+        if (booking.user.createdAt && new Date(booking.user.createdAt) >= new Date(startDate)) {
+          newUserSet.add(booking.user._id.toString());
+        }
+      }
     });
+
+    report.userStats.totalUsers = userSet.size;
+    report.userStats.newUsers = newUserSet.size;
+    report.userStats.returningUsers = userSet.size - newUserSet.size;
 
     res.json(report);
   } catch (error) {
+    console.error('Error generating booking report:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -66,45 +97,63 @@ exports.getRevenueReport = async (req, res) => {
       bookingDate: {
         $gte: new Date(startDate),
         $lte: new Date(endDate)
-      },
-      paymentStatus: 'paid'
+      }
     };
 
     const bookings = await Booking.find(query)
       .populate('class', 'name tutor location')
+      .populate('user', 'firstName lastName email')
       .select('-__v');
 
     const report = {
-      totalRevenue: 0,
+      totalBookings: bookings.length,
       byClass: {},
       byLocation: {},
       byTutor: {},
-      dailyRevenue: {}
+      dailyBookings: {},
+      userStats: {
+        totalUsers: 0,
+        newUsers: 0,
+        returningUsers: 0
+      }
     };
 
+    const userSet = new Set();
+    const newUserSet = new Set();
+
     bookings.forEach(booking => {
-      const amount = booking.paymentAmount;
-      report.totalRevenue += amount;
+      // Count by class
+      const className = booking.class?.name || 'Unknown';
+      report.byClass[className] = (report.byClass[className] || 0) + 1;
 
-      // Revenue by class
-      const className = booking.class.name;
-      report.byClass[className] = (report.byClass[className] || 0) + amount;
+      // Count by location
+      const locationName = booking.class?.location?.name || 'Unknown';
+      report.byLocation[locationName] = (report.byLocation[locationName] || 0) + 1;
 
-      // Revenue by location
-      const locationName = booking.class.location.name;
-      report.byLocation[locationName] = (report.byLocation[locationName] || 0) + amount;
+      // Count by tutor
+      const tutorName = booking.class?.tutor?.name || 'Unknown';
+      report.byTutor[tutorName] = (report.byTutor[tutorName] || 0) + 1;
 
-      // Revenue by tutor
-      const tutorName = booking.class.tutor.name;
-      report.byTutor[tutorName] = (report.byTutor[tutorName] || 0) + amount;
-
-      // Daily revenue
+      // Count daily bookings
       const date = booking.bookingDate.toISOString().split('T')[0];
-      report.dailyRevenue[date] = (report.dailyRevenue[date] || 0) + amount;
+      report.dailyBookings[date] = (report.dailyBookings[date] || 0) + 1;
+
+      // Track unique users
+      if (booking.user) {
+        userSet.add(booking.user._id.toString());
+        if (booking.user.createdAt && new Date(booking.user.createdAt) >= new Date(startDate)) {
+          newUserSet.add(booking.user._id.toString());
+        }
+      }
     });
+
+    report.userStats.totalUsers = userSet.size;
+    report.userStats.newUsers = newUserSet.size;
+    report.userStats.returningUsers = userSet.size - newUserSet.size;
 
     res.json(report);
   } catch (error) {
+    console.error('Error generating revenue report:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -122,6 +171,8 @@ exports.getAttendanceReport = async (req, res) => {
 
     const bookings = await Booking.find(query)
       .populate('class', 'name tutor location')
+      .populate('class.tutor', 'name')
+      .populate('class.location', 'name')
       .select('-__v');
 
     const report = {
@@ -138,32 +189,34 @@ exports.getAttendanceReport = async (req, res) => {
 
     bookings.forEach(booking => {
       // Count attendance status
-      report.attendance[booking.attendanceStatus]++;
+      const status = booking.attendanceStatus || 'not_checked';
+      report.attendance[status]++;
 
       // Attendance by class
-      const className = booking.class.name;
+      const className = booking.class?.name || 'Unknown';
       if (!report.byClass[className]) {
         report.byClass[className] = { present: 0, absent: 0, not_checked: 0 };
       }
-      report.byClass[className][booking.attendanceStatus]++;
+      report.byClass[className][status]++;
 
       // Attendance by location
-      const locationName = booking.class.location.name;
+      const locationName = booking.class?.location?.name || 'Unknown';
       if (!report.byLocation[locationName]) {
         report.byLocation[locationName] = { present: 0, absent: 0, not_checked: 0 };
       }
-      report.byLocation[locationName][booking.attendanceStatus]++;
+      report.byLocation[locationName][status]++;
 
       // Attendance by tutor
-      const tutorName = booking.class.tutor.name;
+      const tutorName = booking.class?.tutor?.name || 'Unknown';
       if (!report.byTutor[tutorName]) {
         report.byTutor[tutorName] = { present: 0, absent: 0, not_checked: 0 };
       }
-      report.byTutor[tutorName][booking.attendanceStatus]++;
+      report.byTutor[tutorName][status]++;
     });
 
     res.json(report);
   } catch (error) {
+    console.error('Error generating attendance report:', error);
     res.status(500).json({ message: error.message });
   }
 };
@@ -278,19 +331,31 @@ exports.getTutorReport = async (req, res) => {
 // Get location report
 exports.getLocationReport = async (req, res) => {
   try {
+    const { startDate, endDate } = req.query;
+    
     // Get all locations
     const locations = await Location.find().select('-__v');
+    
+    // Get active classes for these locations within date range
     const classes = await Class.find({ 
       location: { $in: locations.map(l => l._id) },
-      status: 'active'
+      status: 'active',
+      createdAt: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      }
     })
       .populate('location', 'name')
       .select('-__v');
 
-    // Get all bookings for these classes
+    // Get bookings for these classes within date range
     const bookings = await Booking.find({
       class: { $in: classes.map(c => c._id) },
-      status: { $in: ['confirmed', 'completed'] }
+      status: { $in: ['confirmed', 'completed'] },
+      bookingDate: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      }
     })
       .populate('class', 'location')
       .select('-__v');
@@ -301,40 +366,37 @@ exports.getLocationReport = async (req, res) => {
       byCity: {},
       classDistribution: {},
       capacityUtilization: {},
-      bookingDistribution: {},  // Add booking count by location
-      revenueDistribution: {}   // Add revenue by location
+      bookingDistribution: {}
     };
 
     locations.forEach(location => {
       // Count by status
       report.byStatus[location.status] = (report.byStatus[location.status] || 0) + 1;
 
-      // Count by city
-      report.byCity[location.address.city] = (report.byCity[location.address.city] || 0) + 1;
+      // Count by city - safely handle missing address data
+      const city = location.address?.city || 'Unknown';
+      report.byCity[city] = (report.byCity[city] || 0) + 1;
 
       // Count active classes
       const locationClasses = classes.filter(c => c.location._id.toString() === location._id.toString());
       report.classDistribution[location.name] = locationClasses.length;
 
-      // Count bookings and calculate revenue for this location
+      // Count bookings for this location
       const locationClassIds = locationClasses.map(c => c._id.toString());
       const locationBookings = bookings.filter(b => locationClassIds.includes(b.class._id.toString()));
       report.bookingDistribution[location.name] = locationBookings.length;
-      
-      // Calculate total revenue for this location
-      const locationRevenue = locationBookings.reduce((sum, booking) => sum + (booking.paymentAmount || 0), 0);
-      report.revenueDistribution[location.name] = locationRevenue;
 
       // Calculate capacity utilization
       report.capacityUtilization[location.name] = {
-        totalCapacity: location.capacity,
+        totalCapacity: location.capacity || 0,
         classesCount: locationClasses.length,
-        utilizationRate: Math.round((locationClasses.length / location.capacity) * 100)
+        utilizationRate: Math.round((locationClasses.length / (location.capacity || 1)) * 100)
       };
     });
 
     res.json(report);
   } catch (error) {
+    console.error('Error generating location report:', error);
     res.status(500).json({ message: error.message });
   }
 };

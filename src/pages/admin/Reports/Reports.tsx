@@ -188,23 +188,7 @@ const Reports = () => {
       </Typography>
 
       {/* Key Metrics */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} sm={6} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <AttachMoneyIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">Total Revenue</Typography>
-              </Box>
-              <Typography variant="h4" gutterBottom>
-                ${revenueData?.totalRevenue?.toLocaleString() || 0}
-              </Typography>
-              <Typography variant="body2" color="success.main">
-                Revenue by class type
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
+      <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} sm={6} md={4}>
           <Card>
             <CardContent>
@@ -216,7 +200,7 @@ const Reports = () => {
                 {bookingData?.totalBookings || 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                {attendanceData?.attendance?.present || 0}% attendance rate
+                {bookingData?.userStats?.newUsers || 0} new users
               </Typography>
             </CardContent>
           </Card>
@@ -232,128 +216,31 @@ const Reports = () => {
                 {tutorData?.classDistribution ? Object.values(tutorData.classDistribution).reduce((sum: number, count: number) => sum + count, 0) : 0}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Total classes across all tutors
+                {bookingData?.byStatus?.confirmed || 0} confirmed bookings
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={4}>
+          <Card>
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <PeopleIcon color="primary" sx={{ mr: 1 }} />
+                <Typography variant="h6">User Stats</Typography>
+              </Box>
+              <Typography variant="h4" gutterBottom>
+                {bookingData?.userStats?.totalUsers || 0}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {bookingData?.userStats?.returningUsers || 0} returning users
               </Typography>
             </CardContent>
           </Card>
         </Grid>
       </Grid>
 
-      {/* Revenue by Class */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardHeader
-              title="Revenue by Class"
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Class</TableCell>
-                      <TableCell align="right">Bookings</TableCell>
-                      <TableCell align="right">Revenue</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {revenueData?.byClass && Object.entries(revenueData.byClass).map(([className, revenue]) => (
-                      <TableRow key={className}>
-                        <TableCell>{className}</TableCell>
-                        <TableCell align="right">
-                          {bookingData?.byClass?.[className] || 0}
-                        </TableCell>
-                        <TableCell align="right">
-                          ${Number(revenue).toLocaleString()}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Tutor Performance */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardHeader
-              title="Tutor Performance"
-              action={
-                <IconButton>
-                  <MoreVertIcon />
-                </IconButton>
-              }
-            />
-            <CardContent>
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Tutor</TableCell>
-                      <TableCell align="right">Active Classes</TableCell>
-                      <TableCell align="right">Students</TableCell>
-                      <TableCell align="right">Rating</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {tutorData?.classDistribution && Object.entries(tutorData.classDistribution).map(([tutor, classes]) => (
-                      <TableRow key={tutor}>
-                        <TableCell component="th" scope="row">
-                          {tutor}
-                        </TableCell>
-                        <TableCell align="right">{classes}</TableCell>
-                        <TableCell align="right">
-                          {tutorData?.studentDistribution?.[tutor] || 0}
-                        </TableCell>
-                        <TableCell align="right">
-                          {tutorData?.ratingDistribution?.[tutor]?.toFixed(1) || 'N/A'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Charts Section */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Revenue by Location */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardHeader title="Revenue by Location" />
-            <CardContent>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name]) => ({
-                      name,
-                      revenue: locationData?.revenueDistribution?.[name] || 0
-                    })) : []}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis />
-                    <Tooltip formatter={(value) => [`$${value.toLocaleString()}`, 'Revenue']} />
-                    <Bar dataKey="revenue" fill="#8884d8" />
-                  </BarChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Bookings by Location */}
+      {/* Location Statistics */}
+      <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
           <Card>
             <CardHeader title="Bookings by Location" />
@@ -379,40 +266,6 @@ const Reports = () => {
           </Card>
         </Grid>
 
-        {/* Class Distribution */}
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardHeader title="Class Distribution" />
-            <CardContent>
-              <Box sx={{ height: 300 }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name, value]) => ({
-                        name,
-                        value
-                      })) : []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {Object.entries(locationData?.classDistribution || {}).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </Box>
-            </CardContent>
-          </Card>
-        </Grid>
-
-        {/* Utilization Rate */}
         <Grid item xs={12} md={6}>
           <Card>
             <CardHeader title="Location Utilization" />
@@ -455,7 +308,6 @@ const Reports = () => {
               <TableHead>
                 <TableRow>
                   <TableCell>Location</TableCell>
-                  <TableCell align="right">Total Revenue</TableCell>
                   <TableCell align="right">Total Bookings</TableCell>
                   <TableCell align="right">Active Classes</TableCell>
                   <TableCell align="right">Utilization Rate</TableCell>
@@ -468,13 +320,10 @@ const Reports = () => {
                       {locationName}
                     </TableCell>
                     <TableCell align="right">
-                      ${locationData?.revenueDistribution?.[locationName]?.toLocaleString() || 0}
-                    </TableCell>
-                    <TableCell align="right">
                       {locationData?.bookingDistribution?.[locationName] || 0}
                     </TableCell>
                     <TableCell align="right">
-                      {classes}
+                      {classes as number}
                     </TableCell>
                     <TableCell align="right">
                       {locationData?.capacityUtilization?.[locationName]?.utilizationRate || 0}%
