@@ -27,9 +27,10 @@ exports.getBookings = async (req, res) => {
     }
 
     const bookings = await Booking.find(filter)
-      .populate('user', 'name email')
+      .populate('user', 'firstName lastName email')
       .populate({
         path: 'class',
+        select: 'name description duration price capacity tutor location',
         populate: [
           { path: 'tutor', select: 'name email' },
           { path: 'location', select: 'name address' }
@@ -86,23 +87,41 @@ exports.getBookingById = async (req, res) => {
 // Create a new booking
 exports.createBooking = async (req, res) => {
   try {
-    const { class: classId, bookingDate, paymentMethod, status, paymentAmount } = req.body;
-
-    // Create booking
-    const booking = new Booking({
-      user: req.user.id,
+    const {
       class: classId,
-      bookingDate: new Date(bookingDate),
+      user,
+      bookingDate,
       paymentAmount,
       paymentMethod,
-      status: status || 'pending'
+      status
+    } = req.body;
+
+    // Create the booking
+    const booking = new Booking({
+      class: classId,
+      user,
+      bookingDate,
+      paymentAmount,
+      paymentMethod,
+      status
     });
 
     await booking.save();
 
+    // Populate the booking with class and user information
+    const populatedBooking = await Booking.findById(booking._id)
+      .populate('user', 'firstName lastName email')
+      .populate({
+        path: 'class',
+        populate: [
+          { path: 'tutor', select: 'firstName lastName email' },
+          { path: 'location', select: 'name address' }
+        ]
+      });
+
     res.status(201).json({
       success: true,
-      data: booking
+      data: populatedBooking
     });
   } catch (error) {
     res.status(500).json({
@@ -209,6 +228,51 @@ exports.getClassBookings = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching class bookings',
+      error: error.message
+    });
+  }
+};
+
+// Update a booking
+exports.updateBooking = async (req, res) => {
+  try {
+    const { status, ...updateData } = req.body;
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Update the booking
+    Object.assign(booking, updateData);
+    if (status) {
+      booking.status = status;
+    }
+    await booking.save();
+
+    // Populate the updated booking
+    const updatedBooking = await Booking.findById(booking._id)
+      .populate('user', 'firstName lastName email')
+      .populate({
+        path: 'class',
+        select: 'name description duration price capacity tutor location',
+        populate: [
+          { path: 'tutor', select: 'name email' },
+          { path: 'location', select: 'name address' }
+        ]
+      });
+
+    res.json({
+      success: true,
+      data: updatedBooking
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error updating booking',
       error: error.message
     });
   }

@@ -65,6 +65,8 @@ export const userAPI = {
   getById: (id: string) => api.get(`/users/${id}`).then(response => response.data),
   update: (id: string, data: any) => api.put(`/users/${id}`, data).then(response => response.data),
   delete: (id: string) => api.delete(`/users/${id}`).then(response => response.data),
+  create: (data: { firstName: string; lastName: string; email: string; phoneNumber: string }) => 
+    api.post('/users', data).then(response => response.data),
 };
 
 // Class API

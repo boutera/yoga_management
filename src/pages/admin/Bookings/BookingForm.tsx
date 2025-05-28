@@ -15,19 +15,24 @@ import {
   Autocomplete,
   CircularProgress,
   Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { DatePicker, TimePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { format, parseISO } from 'date-fns';
-import { bookingAPI, classAPI, tutorAPI } from '../../../services/api.ts';
+import { bookingAPI, classAPI, tutorAPI, userAPI } from '../../../services/api';
 
 interface Class {
   _id: string;
   name: string;
+  description: string;
   duration: number;
   price: number;
+  capacity: number;
   tutor: {
     _id: string;
     name: string;
@@ -44,6 +49,15 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  firstName: string;
+  lastName: string;
+}
+
+interface NewUser {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phoneNumber: string;
 }
 
 const BookingForm = () => {
@@ -56,6 +70,13 @@ const BookingForm = () => {
   const [error, setError] = useState<string | null>(null);
   const [classes, setClasses] = useState<Class[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [newUserDialogOpen, setNewUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState<NewUser>({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phoneNumber: '',
+  });
 
   const [formData, setFormData] = useState({
     class: '',
@@ -84,12 +105,12 @@ const BookingForm = () => {
         throw new Error(classesResponse.message || 'Failed to fetch classes');
       }
 
-      // Fetch tutors
-      const tutorsResponse = await tutorAPI.getAll();
-      if (tutorsResponse.success) {
-        setUsers(tutorsResponse.data);
+      // Fetch users
+      const usersResponse = await userAPI.getAll();
+      if (usersResponse.success) {
+        setUsers(usersResponse.data);
       } else {
-        throw new Error(tutorsResponse.message || 'Failed to fetch tutors');
+        throw new Error(usersResponse.message || 'Failed to fetch users');
       }
 
       // If editing, fetch booking data
@@ -150,6 +171,47 @@ const BookingForm = () => {
         ...prev,
         user: newValue._id,
       }));
+    } else if (event.target.value) {
+      // If user enters a new email, open the new user dialog
+      setNewUser(prev => ({ ...prev, email: event.target.value }));
+      setNewUserDialogOpen(true);
+    }
+  };
+
+  const handleNewUserChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setNewUser(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleCreateNewUser = async () => {
+    try {
+      const response = await userAPI.create({
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        email: newUser.email,
+        phoneNumber: newUser.phoneNumber,
+      });
+      if (response.success) {
+        setUsers(prev => [...prev, response.data]);
+        setFormData(prev => ({
+          ...prev,
+          user: response.data._id,
+        }));
+        setNewUserDialogOpen(false);
+        setNewUser({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phoneNumber: '',
+        });
+      } else {
+        setError('Failed to create new user');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to create new user');
     }
   };
 
@@ -180,24 +242,26 @@ const BookingForm = () => {
       const bookingData = {
         class: formData.class,
         user: formData.user,
-        bookingDate: format(formData.date, 'yyyy-MM-dd'),
-        startTime: format(formData.startTime, 'HH:mm'),
-        endTime: format(formData.endTime, 'HH:mm'),
-        status: formData.status,
+        bookingDate: formData.date,
         paymentAmount: formData.price,
-        paymentMethod: 'credit_card', // Default payment method
+        paymentMethod: 'cash', // Default payment method
+        status: formData.status,
       };
 
-      if (id) {
-        await bookingAPI.update(id, bookingData);
+      let response;
+      if (isEditMode && id) {
+        response = await bookingAPI.update(id, bookingData);
       } else {
-        await bookingAPI.create(bookingData);
+        response = await bookingAPI.create(bookingData);
       }
 
-      navigate('/admin/bookings', { state: { refresh: true } });
-    } catch (err) {
-      setError('Failed to save booking');
-      console.error('Error saving booking:', err);
+      if (response.success) {
+        navigate('/admin/bookings');
+      } else {
+        setError(response.message || 'Failed to save booking');
+      }
+    } catch (error: any) {
+      setError(error.message || 'Failed to save booking');
     } finally {
       setSubmitting(false);
     }
@@ -213,7 +277,7 @@ const BookingForm = () => {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" sx={{ mb: 3 }}>
         {isEditMode ? 'Edit Booking' : 'Add New Booking'}
       </Typography>
 
@@ -243,19 +307,38 @@ const BookingForm = () => {
             </Grid>
 
             <Grid item xs={12} sm={6}>
-              <Autocomplete
-                options={users}
-                getOptionLabel={(option) => `${option.name} (${option.email})`}
-                value={users.find(u => u._id === formData.user) || null}
-                onChange={handleUserChange}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="User"
-                    required
-                  />
-                )}
-              />
+              <Box sx={{ display: 'flex', gap: 1 }}>
+                <Autocomplete
+                  options={users}
+                  getOptionLabel={(option) => `${option.firstName} ${option.lastName} (${option.email})`}
+                  value={users.find(u => u._id === formData.user) || null}
+                  onChange={(event, newValue) => {
+                    if (newValue) {
+                      setFormData(prev => ({
+                        ...prev,
+                        user: newValue._id,
+                      }));
+                    }
+                  }}
+                  sx={{ flex: 1 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="User"
+                      required
+                    />
+                  )}
+                />
+                <Button
+                  variant="outlined"
+                  onClick={() => {
+                    setNewUser({ firstName: '', lastName: '', email: '', phoneNumber: '' });
+                    setNewUserDialogOpen(true);
+                  }}
+                >
+                  New User
+                </Button>
+              </Box>
             </Grid>
 
             <Grid item xs={12} sm={6}>
@@ -332,9 +415,8 @@ const BookingForm = () => {
                 value={formData.price}
                 onChange={handleTextChange}
                 required
-                inputProps={{ min: 0, step: 0.01 }}
                 InputProps={{
-                  startAdornment: '$',
+                  startAdornment: <Typography sx={{ mr: 1 }}>$</Typography>,
                 }}
               />
             </Grid>
@@ -344,7 +426,6 @@ const BookingForm = () => {
                 <Button
                   variant="outlined"
                   onClick={() => navigate('/admin/bookings')}
-                  disabled={submitting}
                 >
                   Cancel
                 </Button>
@@ -353,17 +434,68 @@ const BookingForm = () => {
                   variant="contained"
                   disabled={submitting}
                 >
-                  {submitting ? (
-                    <CircularProgress size={24} />
-                  ) : (
-                    isEditMode ? 'Save Changes' : 'Create Booking'
-                  )}
+                  {submitting ? <CircularProgress size={24} /> : 'Save'}
                 </Button>
               </Box>
             </Grid>
           </Grid>
         </form>
       </Paper>
+
+      <Dialog open={newUserDialogOpen} onClose={() => setNewUserDialogOpen(false)}>
+        <DialogTitle>Create New User</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2} sx={{ mt: 1 }}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="First Name"
+                name="firstName"
+                value={newUser.firstName}
+                onChange={handleNewUserChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Last Name"
+                name="lastName"
+                value={newUser.lastName}
+                onChange={handleNewUserChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Email"
+                name="email"
+                type="email"
+                value={newUser.email}
+                onChange={handleNewUserChange}
+                required
+              />
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Phone Number"
+                name="phoneNumber"
+                value={newUser.phoneNumber}
+                onChange={handleNewUserChange}
+                required
+              />
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewUserDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleCreateNewUser} variant="contained">
+            Create User
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

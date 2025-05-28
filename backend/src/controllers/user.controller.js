@@ -1,7 +1,43 @@
 const User = require('../models/user.model');
-const { validationResult } = require('express-validator');
 
-// Get all users (admin only)
+// Create new user
+exports.createUser = async (req, res) => {
+  try {
+    const { firstName, lastName, email, phoneNumber } = req.body;
+
+    // Create new user
+    const user = new User({
+      firstName,
+      lastName,
+      email,
+      phoneNumber,
+      role: 'user'
+    });
+
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      data: {
+        _id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role
+      }
+    });
+  } catch (error) {
+    console.error('Error creating user:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating user',
+      error: error.message
+    });
+  }
+};
+
+// Get all users
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await User.find()
@@ -47,14 +83,14 @@ exports.getUserById = async (req, res) => {
   }
 };
 
-// Update user (admin only)
+// Update user
 exports.updateUser = async (req, res) => {
   try {
-    const { name, email, role, isActive } = req.body;
+    const { firstName, lastName, email, phoneNumber, role, isActive } = req.body;
 
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { name, email, role, isActive },
+      { firstName, lastName, email, phoneNumber, role, isActive },
       { new: true, runValidators: true }
     ).select('-password');
 
@@ -78,7 +114,7 @@ exports.updateUser = async (req, res) => {
   }
 };
 
-// Delete user (admin only)
+// Delete user
 exports.deleteUser = async (req, res) => {
   try {
     const user = await User.findByIdAndDelete(req.params.id);

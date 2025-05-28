@@ -7,6 +7,7 @@ const auth = require('../middleware/auth');
 router.get('/', auth, bookingController.getBookings);
 router.get('/:id', auth, bookingController.getBookingById);
 router.post('/', auth, bookingController.createBooking);
+router.put('/:id', auth, bookingController.updateBooking);
 router.patch('/:id/status', auth, bookingController.updateBookingStatus);
 router.get('/user/bookings', auth, bookingController.getUserBookings);
 router.get('/class/:classId', auth, bookingController.getClassBookings);

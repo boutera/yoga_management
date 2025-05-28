@@ -46,6 +46,8 @@ interface Booking {
     _id: string;
     name: string;
     email: string;
+    firstName: string;
+    lastName: string;
   };
   class: {
     _id: string;
@@ -58,6 +60,8 @@ interface Booking {
       _id: string;
       name: string;
       email: string;
+      firstName: string;
+      lastName: string;
     };
     location: {
       _id: string;
@@ -361,14 +365,14 @@ const BookingsList = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar 
-                          alt={booking.user?.name || 'User'} 
+                          alt={`${booking.user?.firstName} ${booking.user?.lastName}`} 
                           sx={{ width: 32, height: 32 }}
                         >
-                          {booking.user?.name?.charAt(0) || 'U'}
+                          {booking.user?.firstName?.charAt(0) || 'U'}
                         </Avatar>
                         <Box>
                           <Typography variant="body2">
-                            {booking.user?.name || 'Unknown User'}
+                            {`${booking.user?.firstName} ${booking.user?.lastName}`}
                           </Typography>
                           <Typography variant="caption" color="text.secondary">
                             {booking.user?.email || 'N/A'}
@@ -379,13 +383,13 @@ const BookingsList = () => {
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Avatar 
-                          alt={booking.class.tutor?.name || 'Tutor'} 
+                          alt={booking.class?.tutor ? booking.class.tutor.name : 'Tutor'} 
                           sx={{ width: 32, height: 32 }}
                         >
-                          {booking.class.tutor?.name?.charAt(0) || 'T'}
+                          {booking.class?.tutor?.name?.charAt(0) || 'T'}
                         </Avatar>
                         <Typography variant="body2">
-                          {booking.class.tutor?.name || 'Unassigned Tutor'}
+                          {booking.class?.tutor?.name || 'Unassigned Tutor'}
                         </Typography>
                       </Box>
                     </TableCell>
