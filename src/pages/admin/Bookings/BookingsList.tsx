@@ -439,13 +439,6 @@ const BookingsList = () => {
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h4">Bookings Management</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => navigate('/admin/bookings/new')}
-        >
-          Add New Booking
-        </Button>
       </Box>
 
       {error && (

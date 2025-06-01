@@ -22,7 +22,6 @@ import TutorForm from './pages/admin/Tutors/TutorForm';
 import LocationsList from './pages/admin/Locations/LocationsList';
 import LocationForm from './pages/admin/Locations/LocationForm';
 import BookingsList from './pages/admin/Bookings/BookingsList';
-import BookingForm from './pages/admin/Bookings/BookingForm';
 import Reports from './pages/admin/Reports/Reports';
 
 const AppRoutes = () => {
@@ -92,8 +91,6 @@ const AppRoutes = () => {
               
               {/* Bookings Routes */}
               <Route path="bookings" element={<BookingsList />} />
-              <Route path="bookings/new" element={<BookingForm />} />
-              <Route path="bookings/edit/:id" element={<BookingForm />} />
               
               {/* Reports Route */}
               <Route path="reports" element={<Reports />} />

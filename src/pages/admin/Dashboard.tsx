@@ -409,8 +409,8 @@ const Dashboard = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell>Tutor</TableCell>
-                      <TableCell align="right">Active Classes</TableCell>
                       <TableCell align="right">Students</TableCell>
+                      <TableCell align="right">Confirmed Bookings</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -418,7 +418,7 @@ const Dashboard = () => {
                       Object.entries(dashboardData.tutors.classDistribution).map(([tutorName, classes]) => (
                         <TableRow key={tutorName}>
                           <TableCell>{tutorName}</TableCell>
-                          <TableCell align="right">{classes}</TableCell>
+                          <TableCell align="right">{classes as number}</TableCell>
                           <TableCell align="right">
                             {dashboardData.tutors.studentDistribution?.[tutorName] || 0}
                           </TableCell>
