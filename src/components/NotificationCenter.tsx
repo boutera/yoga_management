@@ -43,7 +43,7 @@ const NotificationCenter: React.FC = () => {
   };
 
   const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
+    markAsRead(notification._id);
     if (notification.link) {
       navigate(notification.link);
     }
@@ -114,7 +114,7 @@ const NotificationCenter: React.FC = () => {
           <List sx={{ p: 0 }}>
             {notifications.map((notification) => (
               <ListItem
-                key={notification.id}
+                key={notification._id}
                 sx={{
                   bgcolor: notification.read ? 'inherit' : 'action.hover',
                   '&:hover': {
@@ -127,7 +127,7 @@ const NotificationCenter: React.FC = () => {
                     size="small"
                     onClick={(e) => {
                       e.stopPropagation();
-                      removeNotification(notification.id);
+                      removeNotification(notification._id);
                     }}
                   >
                     <DeleteIcon fontSize="small" />

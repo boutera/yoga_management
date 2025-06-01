@@ -188,7 +188,7 @@ exports.updateBookingStatus = async (req, res) => {
         path: 'class',
         select: 'name description duration price capacity tutor location',
         populate: [
-          { path: 'tutor', select: 'firstName lastName email' },
+          { path: 'tutor', select: 'name email' },
           { path: 'location', select: 'name address' }
         ]
       });
@@ -200,8 +200,8 @@ exports.updateBookingStatus = async (req, res) => {
       });
     }
 
-    // If user is cancelling their own booking request (status is pending)
-    if (status === 'cancelled' && booking.status === 'pending') {
+    // If user is cancelling their own pending booking request
+    if (status === 'cancelled' && booking.status === 'pending' && req.user._id.toString() === booking.user._id.toString()) {
       // Get the class to update its bookedCount
       const classData = await Class.findById(booking.class);
       if (classData) {
@@ -237,6 +237,16 @@ exports.updateBookingStatus = async (req, res) => {
 
     // For admin cancellations or other status updates
     if (status === 'cancelled') {
+      // Get the class to update its bookedCount
+      const classData = await Class.findById(booking.class);
+      if (classData) {
+        // Use findOneAndUpdate to avoid validation
+        await Class.findOneAndUpdate(
+          { _id: booking.class },
+          { $inc: { bookedCount: -1 } }
+        );
+      }
+
       booking.status = 'cancelled';
       booking.cancellationReason = cancellationReason;
       booking.cancellationDate = new Date();
@@ -261,7 +271,7 @@ exports.updateBookingStatus = async (req, res) => {
       } catch (notificationError) {
         console.error('Error creating user notification:', notificationError);
       }
-    } else if (['present', 'absent'].includes(status)) {
+    } else if (status === 'present' || status === 'absent') {
       await booking.markAttendance(status);
 
       // Create notification for user
