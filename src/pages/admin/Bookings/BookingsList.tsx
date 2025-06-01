@@ -157,13 +157,9 @@ const BookingsList = () => {
     if (!selectedBooking) return;
 
     try {
-      const response = await bookingAPI.updateStatus(selectedBooking._id, 'cancelled');
+      const response = await bookingAPI.delete(selectedBooking._id);
       if (response.success) {
-        setBookings(prev => prev.map(b => b._id === selectedBooking._id ? { 
-          ...b, 
-          status: 'cancelled',
-          cancellationDate: new Date().toISOString()
-        } : b));
+        setBookings(prev => prev.filter(b => b._id !== selectedBooking._id));
         setDeleteDialogOpen(false);
         setSelectedBooking(null);
       } else {
@@ -177,11 +173,8 @@ const BookingsList = () => {
 
   const handleApprove = async (bookingId: string) => {
     try {
-      const response = await fetch(`/api/bookings/${bookingId}/approve`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
+      const response = await bookingAPI.updateStatus(bookingId, 'confirmed');
+      if (!response.success) {
         throw new Error('Failed to approve booking');
       }
 
@@ -191,16 +184,20 @@ const BookingsList = () => {
         title: 'Booking Approved',
         message: `Booking #${bookingId} has been approved`,
         link: `/admin/bookings/${bookingId}`,
+        recipient: 'admin'
       });
 
-      // Add notification for user (this would typically be handled by the backend)
-      // The backend would send an email and create a notification for the user
-      addNotification({
-        type: 'info',
-        title: 'Booking Status Update',
-        message: `Your booking #${bookingId} has been approved`,
-        link: `/bookings/${bookingId}`,
-      });
+      // Add notification for user
+      const booking = bookings.find(b => b._id === bookingId);
+      if (booking) {
+        addNotification({
+          type: 'info',
+          title: 'Booking Status Update',
+          message: `Your booking #${bookingId} has been approved`,
+          link: `/bookings/${bookingId}`,
+          recipient: booking.user._id
+        });
+      }
 
       fetchBookings();
     } catch (error) {
@@ -219,15 +216,8 @@ const BookingsList = () => {
     if (!selectedBooking) return;
 
     try {
-      const response = await fetch(`/api/bookings/${selectedBooking._id}/reject`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reason: rejectionReason }),
-      });
-
-      if (!response.ok) {
+      const response = await bookingAPI.updateStatus(selectedBooking._id, 'cancelled');
+      if (!response.success) {
         throw new Error('Failed to reject booking');
       }
 
@@ -237,18 +227,20 @@ const BookingsList = () => {
         title: 'Booking Rejected',
         message: `Booking #${selectedBooking._id} has been rejected`,
         link: `/admin/bookings/${selectedBooking._id}`,
+        recipient: 'admin'
       });
 
-      // Add notification for user (this would typically be handled by the backend)
+      // Add notification for user
       addNotification({
         type: 'error',
         title: 'Booking Status Update',
         message: `Your booking #${selectedBooking._id} has been rejected. Reason: ${rejectionReason}`,
         link: `/bookings/${selectedBooking._id}`,
+        recipient: selectedBooking.user._id
       });
 
       setRejectDialogOpen(false);
-      setRejectionReason('');
+      setSelectedBooking(null);
       fetchBookings();
     } catch (error) {
       console.error('Error rejecting booking:', error);

@@ -3,21 +3,17 @@ const mongoose = require('mongoose');
 const notificationSchema = new mongoose.Schema({
   recipient: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
+    ref: 'User'
   },
   type: {
     type: String,
-    enum: ['success', 'error', 'info', 'warning'],
-    required: true
+    enum: ['success', 'error', 'info', 'warning']
   },
   title: {
-    type: String,
-    required: true
+    type: String
   },
   message: {
-    type: String,
-    required: true
+    type: String
   },
   link: {
     type: String

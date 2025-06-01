@@ -164,14 +164,8 @@ const ClassesList = () => {
       setBookingSuccess(null);
 
       const bookingData = {
-        class: selectedClass._id,
-        user: user._id,
-        bookingDate: new Date().toISOString(),
-        paymentAmount: selectedClass.price || 0,
-        paymentMethod: 'cash',
-        status: 'pending',
-        paymentStatus: 'pending',
-        attendanceStatus: 'not_checked'
+        classId: selectedClass._id,
+        bookingDate: new Date().toISOString()
       };
 
       console.log('Sending booking data:', bookingData);
@@ -184,26 +178,15 @@ const ClassesList = () => {
         setBookingSuccess('Class booked successfully!');
         setShowBookingDialog(false);
 
+        // Update the userBookings state immediately
+        setUserBookings(prev => ({
+          ...prev,
+          [selectedClass._id]: response.data
+        }));
+
         // Then refresh the data
         try {
-          await Promise.all([
-            fetchClasses(),
-            fetchUserBookings()
-          ]);
-
-          // Finally create the notification
-          try {
-            await notificationAPI.create({
-              recipient: 'admin',
-              type: 'info',
-              title: 'New Booking Request',
-              message: `${user.name} has requested to book ${selectedClass.name}`,
-              link: `/admin/bookings/${response.data._id}`
-            });
-          } catch (notificationError) {
-            console.error('Error creating notification:', notificationError);
-            // Don't show this error to the user since the booking was successful
-          }
+          await fetchClasses();
         } catch (refreshError) {
           console.error('Error refreshing data:', refreshError);
           // Show a warning but don't treat it as an error since the booking was successful

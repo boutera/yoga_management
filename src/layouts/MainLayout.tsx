@@ -139,6 +139,7 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
 
           {isAuthenticated && user && (
             <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+              <NotificationCenter />
               <Tooltip title={displayName} arrow>
                 <Avatar 
                   sx={{ 

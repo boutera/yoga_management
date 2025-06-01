@@ -7,6 +7,7 @@ export type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
 export interface Notification {
   _id: string;
+  recipient: string;
   type: NotificationType;
   message: string;
   title?: string;
@@ -52,14 +53,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const addNotification = useCallback(async (notification: Omit<Notification, '_id' | 'read' | 'createdAt'>) => {
     try {
-      const response = await api.post('/notifications', notification);
+      // Ensure the notification has a recipient
+      const notificationWithRecipient = {
+        ...notification,
+        recipient: user?._id // Use the current user's ID as the recipient
+      };
+
+      const response = await api.post('/notifications', notificationWithRecipient);
       if (response.data.success) {
         setNotifications(prev => [response.data.data, ...prev]);
       }
     } catch (error) {
       console.error('Error creating notification:', error);
     }
-  }, []);
+  }, [user]);
 
   const markAsRead = useCallback(async (id: string) => {
     try {

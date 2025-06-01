@@ -1,6 +1,7 @@
 const Booking = require('../models/booking.model');
 const Class = require('../models/class.model');
 const Notification = require('../models/notification.model');
+const User = require('../models/user.model');
 const { validationResult } = require('express-validator');
 
 // Get all bookings with optional filters
@@ -88,81 +89,79 @@ exports.getBookingById = async (req, res) => {
 // Create a new booking
 exports.createBooking = async (req, res) => {
   try {
-    const {
-      class: classId,
-      user,
-      bookingDate,
-      paymentAmount,
-      paymentMethod,
-      status,
-      paymentStatus,
-      attendanceStatus
-    } = req.body;
+    const { classId, bookingDate } = req.body;
+    const userId = req.user._id;
 
-    // Check if class exists and has available spots
-    const classData = await Class.findById(classId);
-    if (!classData) {
-      return res.status(404).json({
-        success: false,
-        message: 'Class not found'
-      });
+    // Check if class exists and is available
+    const yogaClass = await Class.findById(classId);
+    if (!yogaClass) {
+      return res.status(404).json({ message: 'Class not found' });
     }
 
-    // Get current number of active bookings for this class
-    const activeBookings = await Booking.countDocuments({
+    // Check if class is full
+    if (yogaClass.bookedCount >= yogaClass.capacity) {
+      return res.status(400).json({ message: 'Class is full' });
+    }
+
+    // Check if user already has a booking for this class
+    const existingBooking = await Booking.findOne({
+      user: userId,
       class: classId,
       status: { $in: ['pending', 'confirmed'] }
     });
 
-    if (activeBookings >= classData.capacity) {
-      return res.status(400).json({
-        success: false,
-        message: 'Class is full'
-      });
+    if (existingBooking) {
+      return res.status(400).json({ message: 'You already have a booking for this class' });
     }
 
-    // Create the booking
+    // Create booking
     const booking = new Booking({
+      user: userId,
       class: classId,
-      user,
       bookingDate,
-      paymentAmount,
-      paymentMethod,
-      status,
-      paymentStatus,
-      attendanceStatus
+      status: 'pending',
+      paymentStatus: 'pending'
     });
 
     await booking.save();
 
-    // Update the class's bookedCount
-    classData.bookedCount = activeBookings + 1;
-    await classData.save();
+    // Update class booked count
+    yogaClass.bookedCount += 1;
+    await yogaClass.save();
 
-    // Populate the booking with class and user information
+    // Populate booking data for notifications
     const populatedBooking = await Booking.findById(booking._id)
-      .populate('user', 'firstName lastName email')
-      .populate({
-        path: 'class',
-        populate: [
-          { path: 'tutor', select: 'firstName lastName email' },
-          { path: 'location', select: 'name address' }
-        ]
-      });
+      .populate('user', 'firstName lastName')
+      .populate('class', 'name');
 
-    // Create notification for user only
+    // Create notification for user
     try {
-      const userNotification = new Notification({
-        recipient: user,
+      await Notification.create({
+        recipient: userId,
         type: 'info',
-        title: 'Booking Confirmation',
-        message: `Your booking for ${populatedBooking.class.name} has been received and is pending approval.`,
-        link: `/bookings/${populatedBooking._id}`
+        title: 'Booking Created',
+        message: `Your booking for ${populatedBooking.class.name} has been created and is pending approval.`,
+        link: `/bookings/${booking._id}`
       });
-      await userNotification.save();
     } catch (notificationError) {
       console.error('Error creating user notification:', notificationError);
-      // Don't fail the booking if notification fails
+    }
+
+    // Create notification for admin
+    try {
+      // Find an admin user to receive the notification
+      const adminUser = await User.findOne({ role: 'admin' });
+      if (adminUser) {
+        await Notification.create({
+          recipient: adminUser._id,
+          type: 'info',
+          title: 'New Booking Request',
+          message: `${populatedBooking.user.firstName} ${populatedBooking.user.lastName} has requested to book ${populatedBooking.class.name}.`,
+          link: `/admin/bookings/${booking._id}`
+        });
+      }
+    } catch (notificationError) {
+      console.error('Error creating admin notification:', notificationError);
     }
 
     res.status(201).json({
@@ -171,10 +170,10 @@ exports.createBooking = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating booking:', error);
-    res.status(500).json({
+    res.status(500).json({ 
       success: false,
-      message: 'Error creating booking',
-      error: error.message
+      message: 'Error creating booking', 
+      error: error.message 
     });
   }
 };
@@ -183,7 +182,16 @@ exports.createBooking = async (req, res) => {
 exports.updateBookingStatus = async (req, res) => {
   try {
     const { status, cancellationReason } = req.body;
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id)
+      .populate('user', 'firstName lastName email')
+      .populate({
+        path: 'class',
+        select: 'name description duration price capacity tutor location',
+        populate: [
+          { path: 'tutor', select: 'firstName lastName email' },
+          { path: 'location', select: 'name address' }
+        ]
+      });
 
     if (!booking) {
       return res.status(404).json({
@@ -197,8 +205,25 @@ exports.updateBookingStatus = async (req, res) => {
       // Get the class to update its bookedCount
       const classData = await Class.findById(booking.class);
       if (classData) {
-        classData.bookedCount = Math.max(0, classData.bookedCount - 1);
-        await classData.save();
+        // Use findOneAndUpdate to avoid validation
+        await Class.findOneAndUpdate(
+          { _id: booking.class },
+          { $inc: { bookedCount: -1 } }
+        );
+      }
+
+      // Create notification for user
+      try {
+        const userNotification = new Notification({
+          recipient: booking.user._id,
+          type: 'info',
+          title: 'Booking Cancelled',
+          message: `Your booking request for ${booking.class.name} has been cancelled.`,
+          link: `/bookings/${booking._id}`
+        });
+        await userNotification.save();
+      } catch (notificationError) {
+        console.error('Error creating user notification:', notificationError);
       }
 
       // Delete the booking
@@ -222,11 +247,53 @@ exports.updateBookingStatus = async (req, res) => {
         refundAmount: booking.paymentAmount
       };
       await booking.save();
+
+      // Create notification for user
+      try {
+        const userNotification = new Notification({
+          recipient: booking.user._id,
+          type: 'warning',
+          title: 'Booking Cancelled',
+          message: `Your booking for ${booking.class.name} has been cancelled.${cancellationReason ? ` Reason: ${cancellationReason}` : ''}`,
+          link: `/bookings/${booking._id}`
+        });
+        await userNotification.save();
+      } catch (notificationError) {
+        console.error('Error creating user notification:', notificationError);
+      }
     } else if (['present', 'absent'].includes(status)) {
       await booking.markAttendance(status);
+
+      // Create notification for user
+      try {
+        const userNotification = new Notification({
+          recipient: booking.user._id,
+          type: 'info',
+          title: 'Attendance Marked',
+          message: `Your attendance for ${booking.class.name} has been marked as ${status}.`,
+          link: `/bookings/${booking._id}`
+        });
+        await userNotification.save();
+      } catch (notificationError) {
+        console.error('Error creating user notification:', notificationError);
+      }
     } else {
       booking.status = status;
       await booking.save();
+
+      // Create notification for user
+      try {
+        const userNotification = new Notification({
+          recipient: booking.user._id,
+          type: 'info',
+          title: 'Booking Status Updated',
+          message: `Your booking for ${booking.class.name} has been ${status}.`,
+          link: `/bookings/${booking._id}`
+        });
+        await userNotification.save();
+      } catch (notificationError) {
+        console.error('Error creating user notification:', notificationError);
+      }
     }
 
     res.json({
@@ -354,14 +421,6 @@ exports.deleteBooking = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Booking not found'
-      });
-    }
-
-    // Only allow deletion of pending bookings
-    if (booking.status !== 'pending') {
-      return res.status(400).json({
-        success: false,
-        message: 'Only pending bookings can be deleted'
       });
     }
 

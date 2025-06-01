@@ -27,13 +27,11 @@ const bookingSchema = new mongoose.Schema({
   },
   paymentAmount: {
     type: Number,
-    required: true,
     min: 0
   },
   paymentMethod: {
     type: String,
-    enum: ['cash', 'credit_card', 'debit_card', 'online_transfer'],
-    required: true
+    enum: ['cash', 'credit_card', 'debit_card', 'online_transfer']
   },
   paymentDetails: {
     transactionId: String,
