@@ -2,15 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  Paper,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
   TextField,
   InputAdornment,
@@ -20,7 +12,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  CircularProgress,
   Avatar,
   MenuItem,
   Select,
@@ -28,17 +19,18 @@ import {
   InputLabel,
   SelectChangeEvent,
   TextareaAutosize,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Search as SearchIcon,
-  CalendarToday as CalendarIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { bookingAPI } from '../../../services/api.ts';
+import DataTable from '../../../components/DataTable';
 
 interface Booking {
   _id: string;
@@ -86,13 +78,6 @@ interface Booking {
   cancellationDate?: string;
   refundAmount?: number;
 }
-
-const statusColors: Record<string, 'success' | 'warning' | 'error' | 'info'> = {
-  confirmed: 'success',
-  pending: 'warning',
-  cancelled: 'error',
-  completed: 'info',
-};
 
 const BookingsList = () => {
   const navigate = useNavigate();
@@ -259,24 +244,165 @@ const BookingsList = () => {
     return matchesSearch && matchesStatus;
   });
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Typography color="error">{error}</Typography>
-        <Button onClick={fetchBookings} sx={{ mt: 2 }}>
-          Retry
-        </Button>
-      </Box>
-    );
-  }
+  const columns = [
+    {
+      id: 'class',
+      label: 'Class',
+      minWidth: 200,
+      render: (row: Booking) => (
+        <Box>
+          <Typography variant="subtitle2">
+            {row.class?.name || 'Unnamed Class'}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {row.class?.duration ? `${row.class.duration} minutes` : 'Duration not set'}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 'user',
+      label: 'User',
+      minWidth: 200,
+      render: (row: Booking) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar 
+            alt={`${row.user?.firstName} ${row.user?.lastName}`} 
+            sx={{ width: 32, height: 32 }}
+          >
+            {row.user?.firstName?.charAt(0) || 'U'}
+          </Avatar>
+          <Box>
+            <Typography variant="body2">
+              {`${row.user?.firstName} ${row.user?.lastName}`}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {row.user?.email || 'N/A'}
+            </Typography>
+          </Box>
+        </Box>
+      ),
+    },
+    {
+      id: 'tutor',
+      label: 'Tutor',
+      minWidth: 170,
+      render: (row: Booking) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar 
+            alt={row.class?.tutor ? row.class.tutor.name : 'Tutor'} 
+            sx={{ width: 32, height: 32 }}
+          >
+            {row.class?.tutor?.name?.charAt(0) || 'T'}
+          </Avatar>
+          <Typography variant="body2">
+            {row.class?.tutor?.name || 'Unassigned Tutor'}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 'location',
+      label: 'Location',
+      minWidth: 170,
+      render: (row: Booking) => (
+        <Typography variant="body2">{row.class.location?.name}</Typography>
+      ),
+    },
+    {
+      id: 'date',
+      label: 'Date & Time',
+      minWidth: 150,
+      render: (row: Booking) => (
+        <Box>
+          <Typography variant="body2">
+            {format(new Date(row.bookingDate), 'MMM d, yyyy')}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {format(new Date(row.bookingDate), 'HH:mm')}
+          </Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 'capacity',
+      label: 'Capacity',
+      minWidth: 100,
+      align: 'right' as const,
+      render: (row: Booking) => (
+        <Typography variant="body2">
+          {row.class.capacity}
+        </Typography>
+      ),
+    },
+    {
+      id: 'price',
+      label: 'Price',
+      minWidth: 100,
+      align: 'right' as const,
+      render: (row: Booking) => (
+        <Typography variant="body2">
+          ${row.paymentAmount}
+        </Typography>
+      ),
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      minWidth: 120,
+      render: (row: Booking) => (
+        <Chip
+          label={row.status.replace('_', ' ')}
+          color={getStatusColor(row.status)}
+          size="small"
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      minWidth: 150,
+      align: 'right' as const,
+      render: (row: Booking) => (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          {row.status === 'pending' && (
+            <>
+              <Button
+                color="success"
+                size="small"
+                onClick={() => handleApprove(row._id)}
+                sx={{ mr: 1 }}
+              >
+                Approve
+              </Button>
+              <Button
+                color="error"
+                size="small"
+                onClick={() => handleRejectClick(row)}
+                sx={{ mr: 1 }}
+              >
+                Reject
+              </Button>
+            </>
+          )}
+          <IconButton
+            color="primary"
+            onClick={() => navigate(`/admin/bookings/edit/${row._id}`)}
+            size="small"
+          >
+            <EditIcon />
+          </IconButton>
+          <IconButton
+            color="error"
+            onClick={() => handleDeleteClick(row)}
+            size="small"
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
 
   return (
     <Box>
@@ -291,200 +417,55 @@ const BookingsList = () => {
         </Button>
       </Box>
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
       <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <Paper sx={{ flex: 1 }}>
-          <TextField
-            fullWidth
-            variant="outlined"
-            placeholder="Search bookings by class, tutor, or location..."
-            value={searchQuery}
-            onChange={handleSearch}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
-            sx={{ p: 2 }}
-          />
-        </Paper>
-        <Paper sx={{ width: 200 }}>
-          <FormControl fullWidth sx={{ p: 2 }}>
-            <InputLabel>Status</InputLabel>
-            <Select
-              value={statusFilter}
-              onChange={handleStatusFilterChange}
-              label="Status"
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="confirmed">Confirmed</MenuItem>
-              <MenuItem value="pending">Pending</MenuItem>
-              <MenuItem value="cancelled">Cancelled</MenuItem>
-              <MenuItem value="completed">Completed</MenuItem>
-            </Select>
-          </FormControl>
-        </Paper>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Search bookings by class, tutor, or location..."
+          value={searchQuery}
+          onChange={handleSearch}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl sx={{ width: 200 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={statusFilter}
+            onChange={handleStatusFilterChange}
+            label="Status"
+          >
+            <MenuItem value="all">All Status</MenuItem>
+            <MenuItem value="confirmed">Confirmed</MenuItem>
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="cancelled">Cancelled</MenuItem>
+            <MenuItem value="completed">Completed</MenuItem>
+          </Select>
+        </FormControl>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Class</TableCell>
-              <TableCell>User</TableCell>
-              <TableCell>Tutor</TableCell>
-              <TableCell>Location</TableCell>
-              <TableCell>Date & Time</TableCell>
-              <TableCell>Capacity</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredBookings.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  <Typography variant="body1">No bookings found</Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredBookings
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((booking) => (
-                  <TableRow key={booking._id}>
-                    <TableCell>
-                      <Typography variant="subtitle2">
-                        {booking.class?.name || 'Unnamed Class'}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {booking.class?.duration ? `${booking.class.duration} minutes` : 'Duration not set'}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar 
-                          alt={`${booking.user?.firstName} ${booking.user?.lastName}`} 
-                          sx={{ width: 32, height: 32 }}
-                        >
-                          {booking.user?.firstName?.charAt(0) || 'U'}
-                        </Avatar>
-                        <Box>
-                          <Typography variant="body2">
-                            {`${booking.user?.firstName} ${booking.user?.lastName}`}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {booking.user?.email || 'N/A'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Avatar 
-                          alt={booking.class?.tutor ? booking.class.tutor.name : 'Tutor'} 
-                          sx={{ width: 32, height: 32 }}
-                        >
-                          {booking.class?.tutor?.name?.charAt(0) || 'T'}
-                        </Avatar>
-                        <Typography variant="body2">
-                          {booking.class?.tutor?.name || 'Unassigned Tutor'}
-                        </Typography>
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">{booking.class.location?.name}</Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {format(new Date(booking.bookingDate), 'MMM d, yyyy')}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {format(new Date(booking.bookingDate), 'HH:mm')}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        {booking.class.capacity}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Typography variant="body2">
-                        ${booking.paymentAmount}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={booking.status.replace('_', ' ')}
-                        color={getStatusColor(booking.status)}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      {booking.status === 'pending' ? (
-                        <>
-                          <Button
-                            color="success"
-                            size="small"
-                            onClick={() => handleApprove(booking._id)}
-                            sx={{ mr: 1 }}
-                          >
-                            Approve
-                          </Button>
-                          <Button
-                            color="error"
-                            size="small"
-                            onClick={() => handleRejectClick(booking)}
-                            sx={{ mr: 1 }}
-                          >
-                            Reject
-                          </Button>
-                          <IconButton
-                            color="primary"
-                            onClick={() => navigate(`/admin/bookings/edit/${booking._id}`)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDeleteClick(booking)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </>
-                      ) : (
-                        <>
-                          <IconButton
-                            color="primary"
-                            onClick={() => navigate(`/admin/bookings/edit/${booking._id}`)}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            color="error"
-                            onClick={() => handleDeleteClick(booking)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredBookings.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableContainer>
+      <DataTable
+        columns={columns}
+        data={filteredBookings}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={filteredBookings.length}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        loading={loading}
+        error={error}
+        emptyMessage="No bookings found"
+      />
 
       <Dialog
         open={deleteDialogOpen}

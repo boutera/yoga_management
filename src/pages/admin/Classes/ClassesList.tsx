@@ -2,15 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  Paper,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
   TextField,
   InputAdornment,
@@ -32,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { classAPI } from '../../../services/api.ts';
+import DataTable from '../../../components/DataTable';
 
 interface Class {
   _id: string;
@@ -113,20 +106,119 @@ const ClassesList = () => {
     classItem.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const columns = [
+    {
+      id: 'name',
+      label: 'Name',
+      minWidth: 170,
+    },
+    {
+      id: 'description',
+      label: 'Description',
+      minWidth: 200,
+      render: (row: Class) => (
+        <Typography
+          variant="body2"
+          sx={{
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+          }}
+        >
+          {row.description}
+        </Typography>
+      ),
+    },
+    {
+      id: 'duration',
+      label: 'Duration (min)',
+      minWidth: 100,
+      align: 'right' as const,
+    },
+    {
+      id: 'maxCapacity',
+      label: 'Capacity',
+      minWidth: 100,
+      align: 'right' as const,
+    },
+    {
+      id: 'price',
+      label: 'Price',
+      minWidth: 100,
+      align: 'right' as const,
+      format: (value: number) => `$${value.toFixed(2)}`,
+    },
+    {
+      id: 'requiredSkills',
+      label: 'Required Skills',
+      minWidth: 200,
+      render: (row: Class) => (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {row.requiredSkills?.map((skill) => (
+            <Chip
+              key={skill}
+              label={skill}
+              size="small"
+              sx={{ mr: 0.5, mb: 0.5 }}
+            />
+          ))}
+        </Box>
+      ),
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      minWidth: 100,
+      render: (row: Class) => (
+        <Chip
+          label={row.status}
+          color={row.status === 'active' ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      minWidth: 120,
+      align: 'right' as const,
+      render: (row: Class) => (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <IconButton
+            color="primary"
+            onClick={() => navigate(`/admin/classes/${row._id}`)}
+            size="small"
+          >
+            <VisibilityIcon />
+          </IconButton>
+          <IconButton
+            color="primary"
+            onClick={() => navigate(`/admin/classes/edit/${row._id}`)}
+            size="small"
+          >
+            <EditIcon />
+          </IconButton>
+          <IconButton
+            color="error"
+            onClick={() => handleDeleteClick(row)}
+            size="small"
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Classes Management</Typography>
+        <Typography variant="h4">Classes</Typography>
         <Button
           variant="contained"
+          color="primary"
           startIcon={<AddIcon />}
           onClick={() => navigate('/admin/classes/new')}
         >
@@ -140,7 +232,7 @@ const ClassesList = () => {
         </Alert>
       )}
 
-      <Paper sx={{ mb: 3 }}>
+      <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
           variant="outlined"
@@ -154,111 +246,35 @@ const ClassesList = () => {
               </InputAdornment>
             ),
           }}
-          sx={{ p: 2 }}
         />
-      </Paper>
+      </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Description</TableCell>
-              <TableCell>Duration (min)</TableCell>
-              <TableCell>Capacity</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Required Skills</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell align="right">Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredClasses.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8} align="center">
-                  No classes found
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredClasses
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                .map((classItem) => (
-                  <TableRow key={classItem._id}>
-                    <TableCell>{classItem.name}</TableCell>
-                    <TableCell>{classItem.description}</TableCell>
-                    <TableCell>{classItem.duration}</TableCell>
-                    <TableCell>{classItem.maxCapacity}</TableCell>
-                    <TableCell>${classItem.price.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {classItem.requiredSkills?.map((skill) => (
-                        <Chip
-                          key={skill}
-                          label={skill}
-                          size="small"
-                          sx={{ mr: 0.5, mb: 0.5 }}
-                        />
-                      ))}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        label={classItem.status}
-                        color={classItem.status === 'active' ? 'success' : 'default'}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <IconButton
-                        color="primary"
-                        onClick={() => navigate(`/admin/classes/${classItem._id}`)}
-                        title="View Details"
-                      >
-                        <VisibilityIcon />
-                      </IconButton>
-                      <IconButton
-                        color="primary"
-                        onClick={() => navigate(`/admin/classes/edit/${classItem._id}`)}
-                        title="Edit"
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        color="error"
-                        onClick={() => handleDeleteClick(classItem)}
-                        title="Delete"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))
-            )}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredClasses.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableContainer>
+      <DataTable
+        columns={columns}
+        data={filteredClasses}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={filteredClasses.length}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        loading={loading}
+        error={error}
+        emptyMessage="No classes found"
+      />
 
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={() => setDeleteDialogOpen(false)}
       >
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle>Delete Class</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete the class "{selectedClass?.name}"? This action cannot be undone.
+            Are you sure you want to delete this class? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
-          <Button onClick={handleDeleteConfirm} color="error" variant="contained">
+          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
             Delete
           </Button>
         </DialogActions>

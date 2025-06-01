@@ -2,15 +2,7 @@ import { useState, useEffect } from 'react';
 import {
   Box,
   Button,
-  Paper,
   Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TablePagination,
   IconButton,
   TextField,
   InputAdornment,
@@ -22,6 +14,7 @@ import {
   DialogActions,
   Avatar,
   CircularProgress,
+  Alert,
 } from '@mui/material';
 import {
   Add as AddIcon,
@@ -31,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { tutorAPI } from '../../../services/api.ts';
+import DataTable from '../../../components/DataTable';
 
 interface Certification {
   _id?: string;
@@ -47,8 +41,7 @@ interface Tutor {
   specialties: string[];
   certifications: Certification[];
   experience: number;
-  status: 'active' | 'inactive' | 'on_leave';
-  bio?: string;
+  status: 'active' | 'inactive';
 }
 
 const TutorsList = () => {
@@ -108,51 +101,127 @@ const TutorsList = () => {
     if (!selectedTutor) return;
 
     try {
-      const response = await tutorAPI.delete(selectedTutor._id);
-      if (response.success) {
-        setTutors(tutors.filter(t => t._id !== selectedTutor._id));
-        setDeleteDialogOpen(false);
-        setSelectedTutor(null);
-      } else {
-        setError('Failed to delete tutor');
-      }
+      await tutorAPI.delete(selectedTutor._id);
+      await fetchTutors();
+      setDeleteDialogOpen(false);
+      setSelectedTutor(null);
     } catch (err) {
-      setError('An error occurred while deleting the tutor');
+      setError('Failed to delete tutor');
       console.error('Error deleting tutor:', err);
     }
   };
 
   const filteredTutors = tutors.filter((tutor) =>
     tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tutor.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    tutor.specialties.some(specialty => specialty.toLowerCase().includes(searchQuery.toLowerCase()))
+    tutor.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Typography color="error">{error}</Typography>
-        <Button onClick={fetchTutors} sx={{ mt: 2 }}>
-          Retry
-        </Button>
-      </Box>
-    );
-  }
+  const columns = [
+    {
+      id: 'name',
+      label: 'Name',
+      minWidth: 170,
+      render: (row: Tutor) => (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Avatar sx={{ width: 32, height: 32 }}>
+            {row.name.charAt(0)}
+          </Avatar>
+          <Typography variant="body2">{row.name}</Typography>
+        </Box>
+      ),
+    },
+    {
+      id: 'email',
+      label: 'Email',
+      minWidth: 200,
+    },
+    {
+      id: 'phone',
+      label: 'Phone',
+      minWidth: 130,
+    },
+    {
+      id: 'specialties',
+      label: 'Specialties',
+      minWidth: 200,
+      render: (row: Tutor) => (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {row.specialties.map((specialty) => (
+            <Chip key={specialty} label={specialty} size="small" />
+          ))}
+        </Box>
+      ),
+    },
+    {
+      id: 'certifications',
+      label: 'Certifications',
+      minWidth: 200,
+      render: (row: Tutor) => (
+        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+          {row.certifications.map((cert) => (
+            <Chip 
+              key={cert._id || cert.name} 
+              label={`${cert.name} (${cert.year})`} 
+              size="small" 
+              color="primary" 
+              variant="outlined" 
+            />
+          ))}
+        </Box>
+      ),
+    },
+    {
+      id: 'experience',
+      label: 'Experience',
+      minWidth: 100,
+      align: 'right' as const,
+      format: (value: number) => `${value} years`,
+    },
+    {
+      id: 'status',
+      label: 'Status',
+      minWidth: 100,
+      render: (row: Tutor) => (
+        <Chip
+          label={row.status}
+          color={row.status === 'active' ? 'success' : 'default'}
+          size="small"
+        />
+      ),
+    },
+    {
+      id: 'actions',
+      label: 'Actions',
+      minWidth: 120,
+      align: 'right' as const,
+      render: (row: Tutor) => (
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <IconButton
+            color="primary"
+            onClick={() => navigate(`/admin/tutors/edit/${row._id}`)}
+            size="small"
+          >
+            <EditIcon />
+          </IconButton>
+          <IconButton
+            color="error"
+            onClick={() => handleDeleteClick(row)}
+            size="small"
+          >
+            <DeleteIcon />
+          </IconButton>
+        </Box>
+      ),
+    },
+  ];
 
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Tutors Management</Typography>
+        <Typography variant="h4">Tutors</Typography>
         <Button
           variant="contained"
+          color="primary"
           startIcon={<AddIcon />}
           onClick={() => navigate('/admin/tutors/new')}
         >
@@ -160,11 +229,17 @@ const TutorsList = () => {
         </Button>
       </Box>
 
-      <Paper sx={{ mb: 3 }}>
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ mb: 3 }}>
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search tutors by name, email, or specialty..."
+          placeholder="Search tutors..."
           value={searchQuery}
           onChange={handleSearch}
           InputProps={{
@@ -174,89 +249,21 @@ const TutorsList = () => {
               </InputAdornment>
             ),
           }}
-          sx={{ p: 2 }}
         />
-      </Paper>
+      </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Specialties</TableCell>
-              <TableCell>Certifications</TableCell>
-              <TableCell>Experience</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredTutors
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((tutor) => (
-                <TableRow key={tutor._id}>
-                  <TableCell>{tutor.name}</TableCell>
-                  <TableCell>{tutor.email}</TableCell>
-                  <TableCell>{tutor.phone}</TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {tutor.specialties.map((specialty) => (
-                        <Chip key={specialty} label={specialty} size="small" />
-                      ))}
-                    </Box>
-                  </TableCell>
-                  <TableCell>
-                    <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                      {tutor.certifications.map((cert) => (
-                        <Chip 
-                          key={cert._id || cert.name} 
-                          label={`${cert.name} (${cert.year})`} 
-                          size="small" 
-                          color="primary" 
-                          variant="outlined" 
-                        />
-                      ))}
-                    </Box>
-                  </TableCell>
-                  <TableCell>{tutor.experience} years</TableCell>
-                  <TableCell>
-                    <Chip
-                      label={tutor.status}
-                      color={tutor.status === 'active' ? 'success' : 'default'}
-                      size="small"
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <IconButton
-                      size="small"
-                      onClick={() => navigate(`/admin/tutors/edit/${tutor._id}`)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      color="error"
-                      onClick={() => handleDeleteClick(tutor)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={filteredTutors.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-        />
-      </TableContainer>
+      <DataTable
+        columns={columns}
+        data={filteredTutors}
+        page={page}
+        rowsPerPage={rowsPerPage}
+        totalCount={filteredTutors.length}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        loading={loading}
+        error={error}
+        emptyMessage="No tutors found"
+      />
 
       <Dialog
         open={deleteDialogOpen}
