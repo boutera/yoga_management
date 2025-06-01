@@ -32,6 +32,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import NotificationCenter from '../components/NotificationCenter';
 
 const drawerWidth = 280;
 
@@ -90,6 +91,7 @@ const AdminLayout = ({ children }: { children: React.ReactNode }) => {
           <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1, fontWeight: 600, color: 'primary.main' }}>
             Admin Dashboard
           </Typography>
+          <NotificationCenter />
           <Stack direction="row" spacing={2} alignItems="center">
             <Tooltip title={displayName} arrow>
               <Avatar 

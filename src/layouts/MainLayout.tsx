@@ -7,6 +7,7 @@ import { useAuth } from '../contexts/AuthContext';
 import FacebookIcon from '@mui/icons-material/Facebook';
 import InstagramIcon from '@mui/icons-material/Instagram';
 import TwitterIcon from '@mui/icons-material/Twitter';
+import NotificationCenter from '../components/NotificationCenter';
 
 interface User {
   _id: string;
@@ -30,10 +31,6 @@ const MainLayout = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     { text: 'Home', path: '/' },
     { text: 'Classes', path: '/classes' },
-    { text: 'Book a Session', path: '/booking' },
-    { text: 'Our Centers', path: '/locations' },
-    { text: 'Tutors', path: '/tutors' },
-    { text: 'About Us', path: '/about' },
   ];
 
   const handleDrawerToggle = () => {

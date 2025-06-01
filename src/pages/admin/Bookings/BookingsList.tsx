@@ -31,6 +31,7 @@ import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { bookingAPI } from '../../../services/api.ts';
 import DataTable from '../../../components/DataTable';
+import { useNotifications } from '../../../contexts/NotificationContext';
 
 interface Booking {
   _id: string;
@@ -92,6 +93,7 @@ const BookingsList = () => {
   const [error, setError] = useState<string | null>(null);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     fetchBookings();
@@ -175,15 +177,35 @@ const BookingsList = () => {
 
   const handleApprove = async (bookingId: string) => {
     try {
-      const response = await bookingAPI.update(bookingId, { status: 'confirmed' });
-      if (response.success) {
-        setBookings(prev => prev.map(b => b._id === bookingId ? { ...b, status: 'confirmed' } : b));
-      } else {
-        setError('Failed to approve booking');
+      const response = await fetch(`/api/bookings/${bookingId}/approve`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve booking');
       }
-    } catch (err) {
-      setError('An error occurred while approving the booking');
-      console.error('Error approving booking:', err);
+
+      // Add notification for admin
+      addNotification({
+        type: 'success',
+        title: 'Booking Approved',
+        message: `Booking #${bookingId} has been approved`,
+        link: `/admin/bookings/${bookingId}`,
+      });
+
+      // Add notification for user (this would typically be handled by the backend)
+      // The backend would send an email and create a notification for the user
+      addNotification({
+        type: 'info',
+        title: 'Booking Status Update',
+        message: `Your booking #${bookingId} has been approved`,
+        link: `/bookings/${bookingId}`,
+      });
+
+      fetchBookings();
+    } catch (error) {
+      console.error('Error approving booking:', error);
+      setError('Failed to approve booking');
     }
   };
 
@@ -197,23 +219,40 @@ const BookingsList = () => {
     if (!selectedBooking) return;
 
     try {
-      const response = await bookingAPI.updateStatus(selectedBooking._id, 'cancelled', rejectionReason);
-      if (response.success) {
-        setBookings(prev => prev.map(b => b._id === selectedBooking._id ? { 
-          ...b, 
-          status: 'cancelled',
-          cancellationReason: rejectionReason,
-          cancellationDate: new Date().toISOString()
-        } : b));
-        setRejectDialogOpen(false);
-        setSelectedBooking(null);
-        setRejectionReason('');
-      } else {
-        setError('Failed to reject booking');
+      const response = await fetch(`/api/bookings/${selectedBooking._id}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ reason: rejectionReason }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject booking');
       }
-    } catch (err) {
-      setError('An error occurred while rejecting the booking');
-      console.error('Error rejecting booking:', err);
+
+      // Add notification for admin
+      addNotification({
+        type: 'warning',
+        title: 'Booking Rejected',
+        message: `Booking #${selectedBooking._id} has been rejected`,
+        link: `/admin/bookings/${selectedBooking._id}`,
+      });
+
+      // Add notification for user (this would typically be handled by the backend)
+      addNotification({
+        type: 'error',
+        title: 'Booking Status Update',
+        message: `Your booking #${selectedBooking._id} has been rejected. Reason: ${rejectionReason}`,
+        link: `/bookings/${selectedBooking._id}`,
+      });
+
+      setRejectDialogOpen(false);
+      setRejectionReason('');
+      fetchBookings();
+    } catch (error) {
+      console.error('Error rejecting booking:', error);
+      setError('Failed to reject booking');
     }
   };
 
