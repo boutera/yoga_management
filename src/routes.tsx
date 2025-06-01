@@ -47,9 +47,13 @@ const AppRoutes = () => {
 
       {/* User Routes */}
       <Route path="/" element={
-        <MainLayout>
-          <Home />
-        </MainLayout>
+        isAuthenticated && user?.role === 'admin' ? (
+          <Navigate to="/admin/dashboard" replace />
+        ) : (
+          <MainLayout>
+            <Home />
+          </MainLayout>
+        )
       } />
 
       {/* Protected Admin Routes */}
