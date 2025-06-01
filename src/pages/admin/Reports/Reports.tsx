@@ -243,22 +243,26 @@ const Reports = () => {
       <Grid container spacing={3} sx={{ mb: 3 }}>
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader title="Bookings by Location" />
+            <CardHeader title="Location Performance" />
             <CardContent>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
                     data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name]) => ({
                       name,
-                      bookings: locationData?.bookingDistribution?.[name] || 0
+                      bookings: locationData?.bookingDistribution?.[name] || 0,
+                      classes: locationData?.classDistribution?.[name] || 0
                     })) : []}
                     margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="name" />
-                    <YAxis />
+                    <YAxis yAxisId="left" />
+                    <YAxis yAxisId="right" orientation="right" />
                     <Tooltip />
-                    <Bar dataKey="bookings" fill="#82ca9d" />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="bookings" name="Total Bookings" fill="#82ca9d" />
+                    <Bar yAxisId="right" dataKey="classes" name="Active Classes" fill="#8884d8" />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -268,23 +272,31 @@ const Reports = () => {
 
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader title="Location Utilization" />
+            <CardHeader title="Location Status Distribution" />
             <CardContent>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={locationData?.classDistribution ? Object.entries(locationData.classDistribution).map(([name]) => ({
-                      name,
-                      utilization: locationData?.capacityUtilization?.[name]?.utilizationRate || 0
-                    })) : []}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" />
-                    <YAxis domain={[0, 100]} />
-                    <Tooltip formatter={(value) => [`${value}%`, 'Utilization']} />
-                    <Bar dataKey="utilization" fill="#ffc658" />
-                  </BarChart>
+                  <PieChart>
+                    <Pie
+                      data={locationData?.byStatus ? Object.entries(locationData.byStatus).map(([status, count]) => ({
+                        name: status.charAt(0).toUpperCase() + status.slice(1),
+                        value: count
+                      })) : []}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {locationData?.byStatus ? Object.entries(locationData.byStatus).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      )) : []}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
                 </ResponsiveContainer>
               </Box>
             </CardContent>
@@ -292,10 +304,10 @@ const Reports = () => {
         </Grid>
       </Grid>
 
-      {/* Location Performance */}
+      {/* Location Performance Table */}
       <Card sx={{ mt: 4 }}>
         <CardHeader
-          title="Location Performance"
+          title="Location Details"
           action={
             <IconButton>
               <MoreVertIcon />
@@ -310,7 +322,7 @@ const Reports = () => {
                   <TableCell>Location</TableCell>
                   <TableCell align="right">Total Bookings</TableCell>
                   <TableCell align="right">Active Classes</TableCell>
-                  <TableCell align="right">Utilization Rate</TableCell>
+                  <TableCell align="right">Status</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -326,7 +338,7 @@ const Reports = () => {
                       {classes as number}
                     </TableCell>
                     <TableCell align="right">
-                      {locationData?.capacityUtilization?.[locationName]?.utilizationRate || 0}%
+                      {locationData?.byStatus?.[locationName] || 'active'}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -344,7 +356,7 @@ const Reports = () => {
           </Typography>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
-              data={Object.entries(tutorData?.classDistribution || {}).map(([name, count]) => ({
+              data={Object.entries(tutorData?.studentDistribution || {}).map(([name, count]) => ({
                 name,
                 count
               }))}
@@ -380,7 +392,7 @@ const Reports = () => {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="count" fill="#82ca9d" name="Bookings" />
+              <Bar dataKey="count" fill="#82ca9d" name="Students" />
             </BarChart>
           </ResponsiveContainer>
         </Paper>
@@ -435,37 +447,6 @@ const Reports = () => {
                 {Object.entries(bookingData?.byStatus || {}).map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </Paper>
-      </Grid>
-
-      {/* User Statistics */}
-      <Grid item xs={12} md={6}>
-        <Paper sx={{ p: 2 }}>
-          <Typography variant="h6" gutterBottom>
-            User Statistics
-          </Typography>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={[
-                  { name: 'New Users', value: bookingData?.userStats?.newUsers || 0 },
-                  { name: 'Returning Users', value: bookingData?.userStats?.returningUsers || 0 }
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                <Cell fill="#8884d8" />
-                <Cell fill="#82ca9d" />
               </Pie>
               <Tooltip />
               <Legend />

@@ -138,7 +138,7 @@ const ClassesList = () => {
       align: 'right' as const,
     },
     {
-      id: 'maxCapacity',
+      id: 'capacity',
       label: 'Capacity',
       minWidth: 100,
       align: 'right' as const,

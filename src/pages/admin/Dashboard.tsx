@@ -26,6 +26,7 @@ import {
   Add as AddIcon,
   TrendingUp as TrendingUpIcon,
   AttachMoney as AttachMoneyIcon,
+  Refresh as RefreshIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
@@ -187,11 +188,18 @@ const Dashboard = () => {
       const startDate = new Date();
       startDate.setDate(today.getDate() - 30); // Get data for the last 30 days
 
+      console.log('Fetching dashboard data for date range:', {
+        startDate: format(startOfDay(startDate), 'yyyy-MM-dd'),
+        endDate: format(endOfDay(today), 'yyyy-MM-dd')
+      });
+
       const [tutorReport, bookingReport, locationReport] = await Promise.all([
         reportAPI.getTutorReport(format(startOfDay(startDate), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
         reportAPI.getBookingReport(format(startOfDay(startDate), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
         reportAPI.getLocationReport(format(startOfDay(startDate), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
       ]);
+
+      console.log('Received location report:', locationReport);
 
       setDashboardData({
         tutors: tutorReport,
@@ -204,6 +212,10 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleRefresh = () => {
+    fetchDashboardData();
   };
 
   const stats = [
@@ -282,9 +294,18 @@ const Dashboard = () => {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-        Dashboard
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 600, color: 'primary.main' }}>
+          Dashboard
+        </Typography>
+        <Button
+          variant="contained"
+          onClick={handleRefresh}
+          startIcon={<RefreshIcon />}
+        >
+          Refresh Data
+        </Button>
+      </Box>
 
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>

@@ -11,26 +11,38 @@ exports.getBookingReport = async (req, res) => {
     const { startDate, endDate } = req.query;
     console.log('Date range:', { startDate, endDate });
 
+    // Set start date to beginning of day and end date to end of day
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0);
+    
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999);
+
     const query = {
       bookingDate: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: startDateTime,
+        $lte: endDateTime
       }
     };
+
+    console.log('Query date range:', {
+      start: startDateTime,
+      end: endDateTime
+    });
 
     // Get all users created within the date range
     const newUsers = await User.find({
       createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: startDateTime,
+        $lte: endDateTime
       }
     }).select('_id');
     
     console.log('New users found:', newUsers.length);
     console.log('New users query:', {
       createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: startDateTime,
+        $lte: endDateTime
       }
     });
 
@@ -109,10 +121,18 @@ exports.getBookingReport = async (req, res) => {
 exports.getRevenueReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+    
+    // Set start date to beginning of day and end date to end of day
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0);
+    
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999);
+
     const query = {
       bookingDate: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: startDateTime,
+        $lte: endDateTime
       }
     };
 
@@ -178,10 +198,18 @@ exports.getRevenueReport = async (req, res) => {
 exports.getAttendanceReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+    
+    // Set start date to beginning of day and end date to end of day
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0);
+    
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999);
+
     const query = {
       bookingDate: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: startDateTime,
+        $lte: endDateTime
       }
     };
 
@@ -292,6 +320,8 @@ exports.getTutorReport = async (req, res) => {
   try {
     // Get all tutors
     const tutors = await Tutor.find().select('-__v');
+
+    // Get all active classes for these tutors
     const classes = await Class.find({ 
       tutor: { $in: tutors.map(t => t._id) },
       status: 'active'
@@ -313,7 +343,7 @@ exports.getTutorReport = async (req, res) => {
       bySpecialty: {},
       classDistribution: {},
       ratingDistribution: {},
-      studentDistribution: {}  // Add student count by tutor
+      studentDistribution: {}  // This will be used for the chart
     };
 
     tutors.forEach(tutor => {
@@ -325,7 +355,7 @@ exports.getTutorReport = async (req, res) => {
         report.bySpecialty[specialty] = (report.bySpecialty[specialty] || 0) + 1;
       });
 
-      // Count active classes
+      // Count active classes for this tutor
       const tutorClasses = classes.filter(c => c.tutor._id.toString() === tutor._id.toString());
       report.classDistribution[tutor.name] = tutorClasses.length;
 
@@ -348,33 +378,81 @@ exports.getTutorReport = async (req, res) => {
 exports.getLocationReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+    console.log('Location Report - Date range:', { startDate, endDate });
+    
+    // Set start date to beginning of day and end date to end of day
+    const startDateTime = new Date(startDate);
+    startDateTime.setHours(0, 0, 0, 0);
+    
+    const endDateTime = new Date(endDate);
+    endDateTime.setHours(23, 59, 59, 999);
+
+    console.log('Query date range:', {
+      start: startDateTime,
+      end: endDateTime
+    });
     
     // Get all locations
     const locations = await Location.find().select('-__v');
     
-    // Get active classes for these locations within date range
+    // Get all classes for these locations
     const classes = await Class.find({ 
-      location: { $in: locations.map(l => l._id) },
-      status: 'active',
-      createdAt: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
-      }
+      location: { $in: locations.map(l => l._id) }
     })
       .populate('location', 'name')
       .select('-__v');
 
-    // Get bookings for these classes within date range
+    console.log('Found classes:', classes.map(c => ({
+      name: c.name,
+      location: c.location?.name,
+      status: c.status
+    })));
+
+    // Get ALL confirmed bookings within date range
     const bookings = await Booking.find({
-      class: { $in: classes.map(c => c._id) },
-      status: { $in: ['confirmed', 'completed'] },
+      status: 'confirmed',
       bookingDate: {
-        $gte: new Date(startDate),
-        $lte: new Date(endDate)
+        $gte: startDateTime,
+        $lte: endDateTime
       }
     })
-      .populate('class', 'location')
-      .select('-__v');
+    .populate({
+      path: 'class',
+      populate: {
+        path: 'location',
+        select: 'name'
+      }
+    });
+
+    console.log('Total confirmed bookings found:', bookings.length);
+    console.log('Confirmed bookings by location:', bookings.reduce((acc, b) => {
+      const loc = b.class?.location?.name || 'Unknown';
+      acc[loc] = (acc[loc] || 0) + 1;
+      return acc;
+    }, {}));
+
+    // Log each confirmed booking for debugging
+    console.log('Detailed confirmed bookings:');
+    bookings.forEach((booking, index) => {
+      console.log(`Booking ${index + 1}:`, {
+        id: booking._id,
+        status: booking.status,
+        class: booking.class?.name,
+        location: booking.class?.location?.name,
+        bookingDate: booking.bookingDate
+      });
+    });
+
+    // Simple booking count by location
+    const bookingCounts = {};
+    bookings.forEach(booking => {
+      const locationName = booking.class?.location?.name;
+      if (locationName) {
+        bookingCounts[locationName] = (bookingCounts[locationName] || 0) + 1;
+      }
+    });
+
+    console.log('Raw booking counts:', bookingCounts);
 
     const report = {
       totalLocations: locations.length,
@@ -382,34 +460,37 @@ exports.getLocationReport = async (req, res) => {
       byCity: {},
       classDistribution: {},
       capacityUtilization: {},
-      bookingDistribution: {}
+      bookingDistribution: bookingCounts  // Use the raw counts directly
     };
 
+    // Process each location for other metrics
     locations.forEach(location => {
       // Count by status
       report.byStatus[location.status] = (report.byStatus[location.status] || 0) + 1;
 
-      // Count by city - safely handle missing address data
+      // Count by city
       const city = location.address?.city || 'Unknown';
       report.byCity[city] = (report.byCity[city] || 0) + 1;
 
-      // Count active classes
-      const locationClasses = classes.filter(c => c.location._id.toString() === location._id.toString());
+      // Get active classes for this location
+      const locationClasses = classes.filter(c => 
+        c.location._id.toString() === location._id.toString() && 
+        c.status === 'active'
+      );
       report.classDistribution[location.name] = locationClasses.length;
 
-      // Count bookings for this location
-      const locationClassIds = locationClasses.map(c => c._id.toString());
-      const locationBookings = bookings.filter(b => locationClassIds.includes(b.class._id.toString()));
-      report.bookingDistribution[location.name] = locationBookings.length;
+      // Calculate capacity
+      const totalCapacity = locationClasses.reduce((sum, cls) => sum + (cls.capacity || 0), 0);
 
-      // Calculate capacity utilization
+      // Calculate utilization
       report.capacityUtilization[location.name] = {
-        totalCapacity: location.capacity || 0,
+        totalCapacity: totalCapacity,
         classesCount: locationClasses.length,
-        utilizationRate: Math.round((locationClasses.length / (location.capacity || 1)) * 100)
+        utilizationRate: Math.round((bookingCounts[location.name] || 0) / (totalCapacity || 1) * 100)
       };
     });
 
+    console.log('Final report:', report);
     res.json(report);
   } catch (error) {
     console.error('Error generating location report:', error);
