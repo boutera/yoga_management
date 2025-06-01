@@ -209,4 +209,13 @@ export const reportAPI = {
     api.get(`/reports/export?type=${type}&format=${format}&startDate=${startDate}&endDate=${endDate}`).then(response => response.data),
 };
 
+// Notification API
+export const notificationAPI = {
+  getAll: () => api.get('/notifications').then(response => response.data),
+  create: (data: any) => api.post('/notifications', data).then(response => response.data),
+  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`).then(response => response.data),
+  markAllAsRead: () => api.patch('/notifications/read-all').then(response => response.data),
+  delete: (id: string) => api.delete(`/notifications/${id}`).then(response => response.data),
+};
+
 export default api;

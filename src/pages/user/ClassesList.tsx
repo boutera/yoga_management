@@ -41,9 +41,19 @@ import {
   ExpandLess as ExpandLessIcon,
   Event as EventIcon,
 } from '@mui/icons-material';
-import { classAPI, bookingAPI } from '../../services/api';
+import { classAPI, bookingAPI, notificationAPI } from '../../services/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useNotifications } from '../../contexts/NotificationContext';
+
+interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  name: string;
+}
 
 interface Class {
   _id: string;
@@ -89,6 +99,7 @@ const ClassesList = () => {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const { user } = useAuth();
+  const { addNotification } = useNotifications();
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -168,13 +179,26 @@ const ClassesList = () => {
       const response = await bookingAPI.create(bookingData);
       console.log('Booking response:', response);
 
-      setBookingSuccess('Class booked successfully!');
-      setShowBookingDialog(false);
-      
-      await Promise.all([
-        fetchClasses(),
-        fetchUserBookings()
-      ]);
+      if (response.success) {
+        // Create notification for admin using the backend API
+        await notificationAPI.create({
+          recipient: 'admin', // The backend will handle this
+          type: 'info',
+          title: 'New Booking Request',
+          message: `${user.name} has requested to book ${selectedClass.name}`,
+          link: `/admin/bookings/${response.data._id}`
+        });
+
+        setBookingSuccess('Class booked successfully!');
+        setShowBookingDialog(false);
+        
+        await Promise.all([
+          fetchClasses(),
+          fetchUserBookings()
+        ]);
+      } else {
+        setBookingError('Failed to book class. Please try again.');
+      }
 
     } catch (error: any) {
       console.error('Booking error:', error);

@@ -23,6 +23,7 @@ app.use('/api/tutors', require('./routes/tutor.routes'));
 app.use('/api/locations', require('./routes/location.routes'));
 app.use('/api/bookings', require('./routes/booking.routes'));
 app.use('/api/reports', require('./routes/report.routes'));
+app.use('/api/notifications', require('./routes/notification.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

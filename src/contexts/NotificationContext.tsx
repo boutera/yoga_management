@@ -1,11 +1,12 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Alert, Snackbar } from '@mui/material';
 import { useAuth } from './AuthContext';
+import api from '../services/api';
 
 export type NotificationType = 'success' | 'error' | 'info' | 'warning';
 
 export interface Notification {
-  id: string;
+  _id: string;
   type: NotificationType;
   message: string;
   title?: string;
@@ -16,7 +17,7 @@ export interface Notification {
 
 interface NotificationContextType {
   notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => void;
+  addNotification: (notification: Omit<Notification, '_id' | 'read' | 'createdAt'>) => void;
   markAsRead: (id: string) => void;
   markAllAsRead: () => void;
   removeNotification: (id: string) => void;
@@ -29,41 +30,76 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const { user } = useAuth();
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'read' | 'createdAt'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: Math.random().toString(36).substr(2, 9),
-      read: false,
-      createdAt: new Date().toISOString(),
-    };
-
-    setNotifications(prev => [newNotification, ...prev]);
-
-    // If it's a user notification, send email
-    if (user?.role === 'user' && notification.type === 'info') {
-      // TODO: Implement email sending
-      console.log('Sending email notification:', notification);
+  // Fetch notifications when user changes
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+    } else {
+      setNotifications([]);
     }
   }, [user]);
 
-  const markAsRead = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.map(notification =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/notifications');
+      if (response.data.success) {
+        setNotifications(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const addNotification = useCallback(async (notification: Omit<Notification, '_id' | 'read' | 'createdAt'>) => {
+    try {
+      const response = await api.post('/notifications', notification);
+      if (response.data.success) {
+        setNotifications(prev => [response.data.data, ...prev]);
+      }
+    } catch (error) {
+      console.error('Error creating notification:', error);
+    }
   }, []);
 
-  const markAllAsRead = useCallback(() => {
-    setNotifications(prev =>
-      prev.map(notification => ({ ...notification, read: true }))
-    );
+  const markAsRead = useCallback(async (id: string) => {
+    try {
+      const response = await api.patch(`/notifications/${id}/read`);
+      if (response.data.success) {
+        setNotifications(prev =>
+          prev.map(notification =>
+            notification._id === id ? { ...notification, read: true } : notification
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
   }, []);
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.filter(notification => notification.id !== id)
-    );
+  const markAllAsRead = useCallback(async () => {
+    try {
+      const response = await api.patch('/notifications/read-all');
+      if (response.data.success) {
+        setNotifications(prev =>
+          prev.map(notification => ({ ...notification, read: true }))
+        );
+      }
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+    }
+  }, []);
+
+  const removeNotification = useCallback(async (id: string) => {
+    try {
+      const response = await api.delete(`/notifications/${id}`);
+      if (response.data.success) {
+        setNotifications(prev =>
+          prev.filter(notification => notification._id !== id)
+        );
+      }
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+    }
   }, []);
 
   const clearNotifications = useCallback(() => {

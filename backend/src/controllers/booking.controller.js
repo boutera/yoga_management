@@ -1,5 +1,6 @@
 const Booking = require('../models/booking.model');
 const Class = require('../models/class.model');
+const Notification = require('../models/notification.model');
 const { validationResult } = require('express-validator');
 
 // Get all bookings with optional filters
@@ -93,7 +94,9 @@ exports.createBooking = async (req, res) => {
       bookingDate,
       paymentAmount,
       paymentMethod,
-      status
+      status,
+      paymentStatus,
+      attendanceStatus
     } = req.body;
 
     // Check if class exists and has available spots
@@ -125,7 +128,9 @@ exports.createBooking = async (req, res) => {
       bookingDate,
       paymentAmount,
       paymentMethod,
-      status
+      status,
+      paymentStatus,
+      attendanceStatus
     });
 
     await booking.save();
@@ -144,6 +149,28 @@ exports.createBooking = async (req, res) => {
           { path: 'location', select: 'name address' }
         ]
       });
+
+    // Create notification for admin
+    const adminNotification = new Notification({
+      recipient: 'admin', // You'll need to get the admin's ID from your system
+      type: 'info',
+      title: 'New Booking Request',
+      message: `${booking.user.firstName} ${booking.user.lastName} has requested to book ${booking.class.name}`,
+      link: `/admin/bookings/${booking._id}`
+    });
+
+    await adminNotification.save();
+
+    // Create notification for user
+    const userNotification = new Notification({
+      recipient: user,
+      type: 'info',
+      title: 'Booking Confirmation',
+      message: `Your booking for ${booking.class.name} has been received and is pending approval.`,
+      link: `/bookings/${booking._id}`
+    });
+
+    await userNotification.save();
 
     res.status(201).json({
       success: true,
