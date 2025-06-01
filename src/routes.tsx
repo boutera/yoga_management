@@ -10,10 +10,11 @@ import Register from './pages/auth/Register';
 
 // User Pages
 import Home from './pages/user/Home';
+import UserClassesList from './pages/user/ClassesList';
 
 // Admin Pages
 import Dashboard from './pages/admin/Dashboard';
-import ClassesList from './pages/admin/Classes/ClassesList';
+import AdminClassesList from './pages/admin/Classes/ClassesList';
 import ClassForm from './pages/admin/Classes/ClassForm';
 import ClassDetails from './pages/admin/Classes/ClassDetails';
 import TutorsList from './pages/admin/Tutors/TutorsList';
@@ -56,6 +57,16 @@ const AppRoutes = () => {
         )
       } />
 
+      <Route path="/classes" element={
+        isAuthenticated && user?.role === 'admin' ? (
+          <Navigate to="/admin/dashboard" replace />
+        ) : (
+          <MainLayout>
+            <UserClassesList />
+          </MainLayout>
+        )
+      } />
+
       {/* Protected Admin Routes */}
       <Route path="/admin/*" element={
         <ProtectedRoute requiredRole="admin">
@@ -64,7 +75,7 @@ const AppRoutes = () => {
               <Route path="dashboard" element={<Dashboard />} />
               
               {/* Classes Routes */}
-              <Route path="classes" element={<ClassesList />} />
+              <Route path="classes" element={<AdminClassesList />} />
               <Route path="classes/new" element={<ClassForm />} />
               <Route path="classes/edit/:id" element={<ClassForm />} />
               <Route path="classes/:id" element={<ClassDetails />} />
