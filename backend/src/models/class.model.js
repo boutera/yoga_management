@@ -39,7 +39,7 @@ const classSchema = new mongoose.Schema({
   schedule: [{
     dayOfWeek: {
       type: String,
-      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+      enum: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
       required: true
     },
     startTime: {
@@ -61,12 +61,12 @@ const classSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: ['Hatha', 'Vinyasa', 'Ashtanga', 'Yin', 'Restorative', 'Power', 'Other']
+    enum: ['Hatha', 'Vinyasa', 'Ashtanga', 'Yin', 'Restorative', 'Power', 'Prenatal', 'Other']
   },
   level: {
     type: String,
     required: [true, 'Level is required'],
-    enum: ['Beginner', 'Intermediate', 'Advanced', 'All Levels']
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'All Levels', 'all']
   },
   requirements: [{
     type: String,
@@ -108,7 +108,7 @@ classSchema.virtual('isFull').get(async function() {
 // Method to check if class is available at a specific time
 classSchema.methods.isAvailableAt = function(day, time) {
   return this.schedule.some(slot => {
-    if (slot.dayOfWeek !== day) return false;
+    if (slot.dayOfWeek.toLowerCase() !== day.toLowerCase()) return false;
     
     const slotStart = new Date(`2000-01-01T${slot.startTime}`);
     const slotEnd = new Date(`2000-01-01T${slot.endTime}`);

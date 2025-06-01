@@ -150,33 +150,27 @@ exports.createBooking = async (req, res) => {
         ]
       });
 
-    // Create notification for admin
-    const adminNotification = new Notification({
-      recipient: 'admin', // You'll need to get the admin's ID from your system
-      type: 'info',
-      title: 'New Booking Request',
-      message: `${booking.user.firstName} ${booking.user.lastName} has requested to book ${booking.class.name}`,
-      link: `/admin/bookings/${booking._id}`
-    });
-
-    await adminNotification.save();
-
-    // Create notification for user
-    const userNotification = new Notification({
-      recipient: user,
-      type: 'info',
-      title: 'Booking Confirmation',
-      message: `Your booking for ${booking.class.name} has been received and is pending approval.`,
-      link: `/bookings/${booking._id}`
-    });
-
-    await userNotification.save();
+    // Create notification for user only
+    try {
+      const userNotification = new Notification({
+        recipient: user,
+        type: 'info',
+        title: 'Booking Confirmation',
+        message: `Your booking for ${populatedBooking.class.name} has been received and is pending approval.`,
+        link: `/bookings/${populatedBooking._id}`
+      });
+      await userNotification.save();
+    } catch (notificationError) {
+      console.error('Error creating user notification:', notificationError);
+      // Don't fail the booking if notification fails
+    }
 
     res.status(201).json({
       success: true,
       data: populatedBooking
     });
   } catch (error) {
+    console.error('Error creating booking:', error);
     res.status(500).json({
       success: false,
       message: 'Error creating booking',
@@ -198,6 +192,25 @@ exports.updateBookingStatus = async (req, res) => {
       });
     }
 
+    // If user is cancelling their own booking request (status is pending)
+    if (status === 'cancelled' && booking.status === 'pending') {
+      // Get the class to update its bookedCount
+      const classData = await Class.findById(booking.class);
+      if (classData) {
+        classData.bookedCount = Math.max(0, classData.bookedCount - 1);
+        await classData.save();
+      }
+
+      // Delete the booking
+      await Booking.findByIdAndDelete(booking._id);
+
+      return res.json({
+        success: true,
+        message: 'Booking request cancelled successfully'
+      });
+    }
+
+    // For admin cancellations or other status updates
     if (status === 'cancelled') {
       booking.status = 'cancelled';
       booking.cancellationReason = cancellationReason;
@@ -221,6 +234,7 @@ exports.updateBookingStatus = async (req, res) => {
       data: booking
     });
   } catch (error) {
+    console.error('Error updating booking status:', error);
     res.status(500).json({
       success: false,
       message: 'Error updating booking status',
@@ -326,6 +340,50 @@ exports.updateBooking = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error updating booking',
+      error: error.message
+    });
+  }
+};
+
+// Delete a booking
+exports.deleteBooking = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id);
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found'
+      });
+    }
+
+    // Only allow deletion of pending bookings
+    if (booking.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending bookings can be deleted'
+      });
+    }
+
+    // Get the class to update its bookedCount
+    const classData = await Class.findById(booking.class);
+    if (classData) {
+      classData.bookedCount = Math.max(0, classData.bookedCount - 1);
+      await classData.save();
+    }
+
+    // Delete the booking
+    await Booking.findByIdAndDelete(booking._id);
+
+    res.json({
+      success: true,
+      message: 'Booking deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting booking:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting booking',
       error: error.message
     });
   }

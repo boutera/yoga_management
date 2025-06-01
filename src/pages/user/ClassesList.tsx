@@ -179,30 +179,42 @@ const ClassesList = () => {
       const response = await bookingAPI.create(bookingData);
       console.log('Booking response:', response);
 
-      if (response.success) {
-        // Create notification for admin using the backend API
-        await notificationAPI.create({
-          recipient: 'admin', // The backend will handle this
-          type: 'info',
-          title: 'New Booking Request',
-          message: `${user.name} has requested to book ${selectedClass.name}`,
-          link: `/admin/bookings/${response.data._id}`
-        });
-
+      if (response && response.success) {
+        // First update the UI state
         setBookingSuccess('Class booked successfully!');
         setShowBookingDialog(false);
-        
-        await Promise.all([
-          fetchClasses(),
-          fetchUserBookings()
-        ]);
-      } else {
-        setBookingError('Failed to book class. Please try again.');
-      }
 
+        // Then refresh the data
+        try {
+          await Promise.all([
+            fetchClasses(),
+            fetchUserBookings()
+          ]);
+
+          // Finally create the notification
+          try {
+            await notificationAPI.create({
+              recipient: 'admin',
+              type: 'info',
+              title: 'New Booking Request',
+              message: `${user.name} has requested to book ${selectedClass.name}`,
+              link: `/admin/bookings/${response.data._id}`
+            });
+          } catch (notificationError) {
+            console.error('Error creating notification:', notificationError);
+            // Don't show this error to the user since the booking was successful
+          }
+        } catch (refreshError) {
+          console.error('Error refreshing data:', refreshError);
+          // Show a warning but don't treat it as an error since the booking was successful
+          setBookingSuccess('Class booked successfully! (Some data may need to be refreshed)');
+        }
+      } else {
+        throw new Error(response?.message || 'Failed to book class');
+      }
     } catch (error: any) {
       console.error('Booking error:', error);
-      setBookingError('Failed to book class. Please try again.');
+      setBookingError(error.message || 'Failed to book class. Please try again.');
     } finally {
       setBookingLoading(false);
     }
@@ -213,7 +225,15 @@ const ClassesList = () => {
       const booking = userBookings[classId];
       if (!booking) return;
 
-      const response = await bookingAPI.updateStatus(booking._id, 'cancelled');
+      let response;
+      if (booking.status === 'pending') {
+        // For pending bookings, delete them
+        response = await bookingAPI.delete(booking._id);
+      } else {
+        // For confirmed bookings, update status to cancelled
+        response = await bookingAPI.updateStatus(booking._id, 'cancelled');
+      }
+
       if (response.success) {
         setUserBookings(prev => {
           const newBookings = { ...prev };
