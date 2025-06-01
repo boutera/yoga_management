@@ -53,6 +53,9 @@ exports.getBookingReport = async (req, res) => {
       .populate('class.location', 'name')
       .select('-__v');
 
+    console.log('Total bookings found:', bookings.length);
+    console.log('Sample booking user data:', bookings[0]?.user);
+
     const report = {
       totalBookings: bookings.length,
       byStatus: {},
@@ -66,7 +69,8 @@ exports.getBookingReport = async (req, res) => {
         totalUsers: 0,
         newUsers: newUsers.length,
         returningUsers: 0
-      }
+      },
+      byUser: {}  // Add user booking distribution
     };
 
     const userSet = new Set();
@@ -99,11 +103,17 @@ exports.getBookingReport = async (req, res) => {
       const date = booking.bookingDate.toISOString().split('T')[0];
       report.dailyBookings[date] = (report.dailyBookings[date] || 0) + 1;
 
-      // Track unique users
+      // Track unique users and their booking counts
       if (booking.user) {
-        userSet.add(booking.user._id.toString());
+        const userId = booking.user._id.toString();
+        userSet.add(userId);
+        const userName = `${booking.user.firstName} ${booking.user.lastName}`;
+        report.byUser[userName] = (report.byUser[userName] || 0) + 1;
       }
     });
+
+    console.log('User booking distribution:', report.byUser);
+    console.log('Total unique users:', userSet.size);
 
     report.userStats.totalUsers = userSet.size;
     report.userStats.returningUsers = userSet.size - report.userStats.newUsers;

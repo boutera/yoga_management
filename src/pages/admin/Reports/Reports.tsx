@@ -226,13 +226,10 @@ const Reports = () => {
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <PeopleIcon color="primary" sx={{ mr: 1 }} />
-                <Typography variant="h6">User Stats</Typography>
+                <Typography variant="h6">Total Users</Typography>
               </Box>
               <Typography variant="h4" gutterBottom>
                 {bookingData?.userStats?.totalUsers || 0}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {bookingData?.userStats?.returningUsers || 0} returning users
               </Typography>
             </CardContent>
           </Card>
@@ -272,31 +269,24 @@ const Reports = () => {
 
         <Grid item xs={12} md={6}>
           <Card>
-            <CardHeader title="Location Status Distribution" />
+            <CardHeader title="User Booking Distribution" />
             <CardContent>
               <Box sx={{ height: 300 }}>
                 <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={locationData?.byStatus ? Object.entries(locationData.byStatus).map(([status, count]) => ({
-                        name: status.charAt(0).toUpperCase() + status.slice(1),
-                        value: count
-                      })) : []}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {locationData?.byStatus ? Object.entries(locationData.byStatus).map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      )) : []}
-                    </Pie>
+                  <BarChart
+                    data={Object.entries(bookingData?.byUser || {}).map(([name, count]) => ({
+                      name,
+                      count
+                    })).sort((a, b) => (b.count as number) - (a.count as number))}
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={70} />
+                    <YAxis />
                     <Tooltip />
                     <Legend />
-                  </PieChart>
+                    <Bar dataKey="count" fill="#8884d8" name="Number of Bookings" />
+                  </BarChart>
                 </ResponsiveContainer>
               </Box>
             </CardContent>
