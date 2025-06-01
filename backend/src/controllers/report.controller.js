@@ -3,17 +3,36 @@ const Class = require('../models/class.model');
 const Tutor = require('../models/tutor.model');
 const Location = require('../models/location.model');
 const { validateDate } = require('../utils/validation');
+const User = require('../models/user.model');
 
 // Get booking report
 exports.getBookingReport = async (req, res) => {
   try {
     const { startDate, endDate } = req.query;
+    console.log('Date range:', { startDate, endDate });
+
     const query = {
       bookingDate: {
         $gte: new Date(startDate),
         $lte: new Date(endDate)
       }
     };
+
+    // Get all users created within the date range
+    const newUsers = await User.find({
+      createdAt: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      }
+    }).select('_id');
+    
+    console.log('New users found:', newUsers.length);
+    console.log('New users query:', {
+      createdAt: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate)
+      }
+    });
 
     const bookings = await Booking.find(query)
       .populate('user', 'firstName lastName email phoneNumber')
@@ -33,13 +52,12 @@ exports.getBookingReport = async (req, res) => {
       dailyBookings: {},
       userStats: {
         totalUsers: 0,
-        newUsers: 0,
+        newUsers: newUsers.length,
         returningUsers: 0
       }
     };
 
     const userSet = new Set();
-    const newUserSet = new Set();
 
     bookings.forEach(booking => {
       // Count by status
@@ -72,15 +90,13 @@ exports.getBookingReport = async (req, res) => {
       // Track unique users
       if (booking.user) {
         userSet.add(booking.user._id.toString());
-        if (booking.user.createdAt && new Date(booking.user.createdAt) >= new Date(startDate)) {
-          newUserSet.add(booking.user._id.toString());
-        }
       }
     });
 
     report.userStats.totalUsers = userSet.size;
-    report.userStats.newUsers = newUserSet.size;
-    report.userStats.returningUsers = userSet.size - newUserSet.size;
+    report.userStats.returningUsers = userSet.size - report.userStats.newUsers;
+
+    console.log('Final report stats:', report.userStats);
 
     res.json(report);
   } catch (error) {

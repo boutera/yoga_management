@@ -11,6 +11,12 @@ import {
   Button,
   CircularProgress,
   Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from '@mui/material';
 import {
   People as PeopleIcon,
@@ -18,10 +24,29 @@ import {
   LocationOn as LocationIcon,
   Class as ClassIcon,
   Add as AddIcon,
+  TrendingUp as TrendingUpIcon,
+  AttachMoney as AttachMoneyIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfDay, endOfDay } from 'date-fns';
 import { reportAPI } from '../../services/api';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const StatCard = ({
   title,
@@ -159,10 +184,13 @@ const Dashboard = () => {
       setError(null);
 
       const today = new Date();
+      const startDate = new Date();
+      startDate.setDate(today.getDate() - 30); // Get data for the last 30 days
+
       const [tutorReport, bookingReport, locationReport] = await Promise.all([
-        reportAPI.getTutorReport(format(startOfDay(today), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
-        reportAPI.getBookingReport(format(startOfDay(today), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
-        reportAPI.getLocationReport(format(startOfDay(today), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
+        reportAPI.getTutorReport(format(startOfDay(startDate), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
+        reportAPI.getBookingReport(format(startOfDay(startDate), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
+        reportAPI.getLocationReport(format(startOfDay(startDate), 'yyyy-MM-dd'), format(endOfDay(today), 'yyyy-MM-dd')),
       ]);
 
       setDashboardData({
@@ -204,6 +232,12 @@ const Dashboard = () => {
       icon: <LocationIcon sx={{ color: '#f44336' }} />,
       color: '#f44336',
     },
+    {
+      title: 'Total Users',
+      value: dashboardData?.bookings?.userStats?.totalUsers || 0,
+      icon: <PeopleIcon sx={{ color: '#9c27b0' }} />,
+      color: '#9c27b0',
+    }
   ];
 
   const quickActions = [
@@ -255,7 +289,7 @@ const Dashboard = () => {
       {/* Stats Grid */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         {stats.map((stat) => (
-          <Grid item xs={12} sm={6} md={3} key={stat.title}>
+          <Grid item xs={12} sm={6} md={4} key={stat.title}>
             <StatCard {...stat} />
           </Grid>
         ))}
@@ -265,7 +299,7 @@ const Dashboard = () => {
       <Typography variant="h5" gutterBottom sx={{ mt: 4, fontWeight: 600, color: 'primary.main' }}>
         Quick Actions
       </Typography>
-      <Grid container spacing={3}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         {quickActions.map((action) => (
           <Grid item xs={12} md={4} key={action.title}>
             <QuickActionCard {...action} />
@@ -273,27 +307,109 @@ const Dashboard = () => {
         ))}
       </Grid>
 
-      {/* Recent Activity */}
-      <Paper 
-        sx={{ 
-          p: 3, 
-          mt: 4,
-          borderRadius: 2,
-          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.05)',
-          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
-          '&:hover': {
-            transform: 'translateY(-4px)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-          },
-        }}
-      >
-        <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
-          Recent Activity
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          {dashboardData?.bookings?.totalBookings ? `${dashboardData.bookings.totalBookings} bookings today` : 'No recent activity to display'}
-        </Typography>
-      </Paper>
+      {/* Booking Status Distribution */}
+      <Grid container spacing={3} sx={{ mb: 4 }}>
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardHeader title="Booking Status Distribution" />
+            <CardContent>
+              <Box sx={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={Object.entries(dashboardData?.bookings?.byStatus || {}).map(([status, count]) => ({
+                        name: status,
+                        value: count
+                      }))}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {Object.entries(dashboardData?.bookings?.byStatus || {}).map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </Box>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Location Performance */}
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardHeader title="Location Performance" />
+            <CardContent>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Location</TableCell>
+                      <TableCell align="right">Bookings</TableCell>
+                      <TableCell align="right">Utilization</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dashboardData?.locations?.classDistribution && 
+                      Object.entries(dashboardData.locations.classDistribution).map(([locationName, classes]) => (
+                        <TableRow key={locationName}>
+                          <TableCell>{locationName}</TableCell>
+                          <TableCell align="right">
+                            {dashboardData.locations.bookingDistribution?.[locationName] || 0}
+                          </TableCell>
+                          <TableCell align="right">
+                            {dashboardData.locations.capacityUtilization?.[locationName]?.utilizationRate || 0}%
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Tutor Performance */}
+      <Grid container spacing={3}>
+        <Grid item xs={12}>
+          <Card>
+            <CardHeader title="Tutor Performance" />
+            <CardContent>
+              <TableContainer>
+                <Table size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tutor</TableCell>
+                      <TableCell align="right">Active Classes</TableCell>
+                      <TableCell align="right">Students</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {dashboardData?.tutors?.classDistribution && 
+                      Object.entries(dashboardData.tutors.classDistribution).map(([tutorName, classes]) => (
+                        <TableRow key={tutorName}>
+                          <TableCell>{tutorName}</TableCell>
+                          <TableCell align="right">{classes}</TableCell>
+                          <TableCell align="right">
+                            {dashboardData.tutors.studentDistribution?.[tutorName] || 0}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
     </Box>
   );
 };
