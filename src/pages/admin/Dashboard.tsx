@@ -34,24 +34,46 @@ const StatCard = ({
   icon: React.ReactNode;
   color: string;
 }) => (
-  <Card>
+  <Card
+    sx={{
+      height: '100%',
+      transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+      background: `linear-gradient(135deg, ${color}15 0%, ${color}08 100%)`,
+      border: `1px solid ${color}30`,
+      '&:hover': {
+        transform: 'translateY(-4px)',
+        boxShadow: `0 4px 20px ${color}20`,
+      },
+    }}
+  >
     <CardContent>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
         <Box
           sx={{
-            backgroundColor: `${color}15`,
-            borderRadius: '50%',
-            p: 1,
+            backgroundColor: `${color}30`,
+            borderRadius: '12px',
+            p: 1.5,
             mr: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {icon}
         </Box>
-        <Typography variant="h6" color="text.secondary">
+        <Typography variant="h6" color="text.primary" sx={{ fontWeight: 500 }}>
           {title}
         </Typography>
       </Box>
-      <Typography variant="h4" component="div">
+      <Typography 
+        variant="h4" 
+        component="div" 
+        sx={{ 
+          fontWeight: 600,
+          color: color,
+          mb: 1,
+        }}
+      >
         {value}
       </Typography>
     </CardContent>
@@ -63,17 +85,40 @@ const QuickActionCard = ({
   description,
   icon,
   onClick,
+  color,
 }: {
   title: string;
   description: string;
   icon: React.ReactNode;
   onClick: () => void;
+  color: string;
 }) => (
-  <Card>
+  <Card
+    sx={{
+      height: '100%',
+      transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+      '&:hover': {
+        transform: 'translateY(-4px)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+      },
+    }}
+  >
     <CardContent>
       <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-        {icon}
-        <Typography variant="h6" sx={{ ml: 1 }}>
+        <Box
+          sx={{
+            backgroundColor: `${color}15`,
+            borderRadius: '12px',
+            p: 1.5,
+            mr: 2,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          {icon}
+        </Box>
+        <Typography variant="h6" sx={{ fontWeight: 500 }}>
           {title}
         </Typography>
       </Box>
@@ -85,6 +130,12 @@ const QuickActionCard = ({
         startIcon={<AddIcon />}
         onClick={onClick}
         fullWidth
+        sx={{
+          bgcolor: color,
+          '&:hover': {
+            bgcolor: `${color}dd`,
+          },
+        }}
       >
         Add New
       </Button>
@@ -127,43 +178,6 @@ const Dashboard = () => {
     }
   };
 
-  const quickActions = [
-    {
-      title: 'Add New Class',
-      description: 'Create a new yoga or healing class',
-      icon: <ClassIcon color="primary" />,
-      onClick: () => navigate('/admin/classes/new'),
-    },
-    {
-      title: 'Add New Tutor',
-      description: 'Register a new instructor',
-      icon: <PeopleIcon color="primary" />,
-      onClick: () => navigate('/admin/tutors/new'),
-    },
-    {
-      title: 'Add New Location',
-      description: 'Add a new center location',
-      icon: <LocationIcon color="primary" />,
-      onClick: () => navigate('/admin/locations/new'),
-    },
-  ];
-
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <Alert severity="error">{error}</Alert>
-      </Box>
-    );
-  }
-
   const stats = [
     {
       title: 'Total Tutors',
@@ -192,9 +206,49 @@ const Dashboard = () => {
     },
   ];
 
+  const quickActions = [
+    {
+      title: 'Add New Class',
+      description: 'Create a new yoga or healing class',
+      icon: <ClassIcon sx={{ color: '#4caf50' }} />,
+      onClick: () => navigate('/admin/classes/new'),
+      color: '#4caf50',
+    },
+    {
+      title: 'Add New Tutor',
+      description: 'Register a new instructor',
+      icon: <PeopleIcon sx={{ color: '#2196f3' }} />,
+      onClick: () => navigate('/admin/tutors/new'),
+      color: '#2196f3',
+    },
+    {
+      title: 'Add New Location',
+      description: 'Add a new center location',
+      icon: <LocationIcon sx={{ color: '#f44336' }} />,
+      onClick: () => navigate('/admin/locations/new'),
+      color: '#f44336',
+    },
+  ];
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <Alert severity="error">{error}</Alert>
+      </Box>
+    );
+  }
+
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
+      <Typography variant="h4" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
         Dashboard
       </Typography>
 
@@ -208,7 +262,7 @@ const Dashboard = () => {
       </Grid>
 
       {/* Quick Actions */}
-      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+      <Typography variant="h5" gutterBottom sx={{ mt: 4, fontWeight: 600, color: 'primary.main' }}>
         Quick Actions
       </Typography>
       <Grid container spacing={3}>
@@ -220,8 +274,20 @@ const Dashboard = () => {
       </Grid>
 
       {/* Recent Activity */}
-      <Paper sx={{ p: 3, mt: 4 }}>
-        <Typography variant="h5" gutterBottom>
+      <Paper 
+        sx={{ 
+          p: 3, 
+          mt: 4,
+          borderRadius: 2,
+          boxShadow: '0 2px 12px 0 rgba(0,0,0,0.05)',
+          transition: 'transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out',
+          '&:hover': {
+            transform: 'translateY(-4px)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          },
+        }}
+      >
+        <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: 'primary.main' }}>
           Recent Activity
         </Typography>
         <Typography variant="body2" color="text.secondary">
