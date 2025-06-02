@@ -106,7 +106,7 @@ const DataTable: React.FC<DataTableProps> = ({
   };
 
   return (
-    <StyledTableContainer component={Paper}>
+    <StyledTableContainer>
       <Table stickyHeader aria-label="sticky table">
         <TableHead>
           <TableRow>
@@ -141,15 +141,17 @@ const DataTable: React.FC<DataTableProps> = ({
               </TableCell>
             </TableRow>
           ) : (
-            data.map((row, index) => (
-              <TableRow hover role="checkbox" tabIndex={-1} key={row._id || index}>
-                {columns.map((column) => (
-                  <TableCell key={column.id} align={column.align}>
-                    {renderCell(row, column)}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+            data
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((row, index) => (
+                <TableRow hover role="checkbox" tabIndex={-1} key={row._id || index}>
+                  {columns.map((column) => (
+                    <TableCell key={column.id} align={column.align}>
+                      {renderCell(row, column)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
           )}
         </TableBody>
       </Table>

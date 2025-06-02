@@ -255,6 +255,7 @@ const ClassForm = () => {
                 onChange={handleTextChange}
                 required
                 disabled={loading}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
@@ -269,18 +270,21 @@ const ClassForm = () => {
                 rows={4}
                 required
                 disabled={loading}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Tutor</InputLabel>
+                <InputLabel id="tutor-label">Tutor</InputLabel>
                 <Select
+                  labelId="tutor-label"
                   name="tutor"
                   value={formData.tutor}
                   onChange={handleSelectChange}
                   required
                   disabled={loading}
+                  label="Tutor"
                 >
                   {tutors.map((tutor) => (
                     <MenuItem key={tutor._id} value={tutor._id}>
@@ -293,13 +297,15 @@ const ClassForm = () => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Location</InputLabel>
+                <InputLabel id="location-label">Location</InputLabel>
                 <Select
+                  labelId="location-label"
                   name="location"
                   value={formData.location}
                   onChange={handleSelectChange}
                   required
                   disabled={loading}
+                  label="Location"
                 >
                   {locations.map((location) => (
                     <MenuItem key={location._id} value={location._id}>
@@ -321,6 +327,7 @@ const ClassForm = () => {
                 required
                 inputProps={{ min: 1 }}
                 disabled={loading}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
@@ -338,6 +345,7 @@ const ClassForm = () => {
                   startAdornment: '$',
                 }}
                 disabled={loading}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
@@ -352,18 +360,21 @@ const ClassForm = () => {
                 required
                 inputProps={{ min: 15, step: 15 }}
                 disabled={loading}
+                InputLabelProps={{ shrink: true }}
               />
             </Grid>
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Category</InputLabel>
+                <InputLabel id="category-label">Category</InputLabel>
                 <Select
+                  labelId="category-label"
                   name="category"
                   value={formData.category}
                   onChange={handleSelectChange}
                   required
                   disabled={loading}
+                  label="Category"
                 >
                   {availableCategories.map((category) => (
                     <MenuItem key={category} value={category}>
@@ -376,13 +387,15 @@ const ClassForm = () => {
 
             <Grid item xs={12} sm={6}>
               <FormControl fullWidth>
-                <InputLabel>Level</InputLabel>
+                <InputLabel id="level-label">Level</InputLabel>
                 <Select
+                  labelId="level-label"
                   name="level"
                   value={formData.level}
                   onChange={handleSelectChange}
                   required
                   disabled={loading}
+                  label="Level"
                 >
                   {availableLevels.map((level) => (
                     <MenuItem key={level} value={level}>
@@ -394,19 +407,21 @@ const ClassForm = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ mt: 2 }}>
                 Schedule
               </Typography>
               {formData.schedule.map((slot, index) => (
                 <Grid container spacing={2} key={index} sx={{ mb: 2 }}>
                   <Grid item xs={12} sm={3}>
                     <FormControl fullWidth>
-                      <InputLabel>Day</InputLabel>
+                      <InputLabel id={`day-label-${index}`}>Day</InputLabel>
                       <Select
+                        labelId={`day-label-${index}`}
                         value={slot.dayOfWeek}
                         onChange={(e) => handleScheduleChange(index, 'dayOfWeek', e.target.value)}
                         required
                         disabled={loading}
+                        label="Day"
                       >
                         {daysOfWeek.map((day) => (
                           <MenuItem key={day} value={day}>

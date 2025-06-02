@@ -151,23 +151,6 @@ const ClassesList = () => {
       format: (value: number) => `$${value.toFixed(2)}`,
     },
     {
-      id: 'requiredSkills',
-      label: 'Required Skills',
-      minWidth: 200,
-      render: (row: Class) => (
-        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-          {row.requiredSkills?.map((skill) => (
-            <Chip
-              key={skill}
-              label={skill}
-              size="small"
-              sx={{ mr: 0.5, mb: 0.5 }}
-            />
-          ))}
-        </Box>
-      ),
-    },
-    {
       id: 'status',
       label: 'Status',
       minWidth: 100,

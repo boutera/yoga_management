@@ -231,20 +231,32 @@ const ClassesList = () => {
     }
   };
 
+  // Helper function to normalize level values
+  const normalizeLevel = (level: string) => {
+    if (!level) return '';
+    const normalized = level.toLowerCase().trim();
+    if (normalized === 'all-levels' || normalized === 'all levels' || normalized === 'all') {
+      return 'all levels';
+    }
+    return normalized;
+  };
+
   // Extract unique values for filters
   const categories = Array.from(new Set(classes.map(cls => cls.category)));
-  const levels = Array.from(new Set(classes.map(cls => cls.level)));
+  const levels = Array.from(new Set(classes.map(cls => normalizeLevel(cls.level))));
   const locations = Array.from(new Set(classes.map(cls => cls.location?.name)));
-  const days = Array.from(new Set(classes.flatMap(cls => cls.schedule?.map(s => s.dayOfWeek) || [])));
+  const days = Array.from(new Set(classes.flatMap(cls => 
+    cls.schedule?.map(s => s.dayOfWeek?.toLowerCase()) || []
+  )));
 
   // Filter classes based on all criteria
   const filteredClasses = classes.filter(cls => {
     const matchesSearch = cls.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          cls.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = !selectedCategory || cls.category === selectedCategory;
-    const matchesLevel = !selectedLevel || cls.level === selectedLevel;
+    const matchesLevel = !selectedLevel || normalizeLevel(cls.level) === normalizeLevel(selectedLevel);
     const matchesLocation = !selectedLocation || cls.location?.name === selectedLocation;
-    const matchesDay = !selectedDay || cls.schedule?.some(s => s.dayOfWeek === selectedDay);
+    const matchesDay = !selectedDay || cls.schedule?.some(s => s.dayOfWeek?.toLowerCase() === selectedDay.toLowerCase());
     const matchesTime = !selectedTime || cls.schedule?.some(s => s.startTime === selectedTime);
     const matchesPrice = cls.price >= priceRange[0] && cls.price <= priceRange[1];
     
