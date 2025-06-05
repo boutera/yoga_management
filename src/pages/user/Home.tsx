@@ -336,14 +336,8 @@ const Home = () => {
       setBookingSuccess(null);
 
       const bookingData = {
-        class: selectedClass._id,
-        user: user._id,
-        bookingDate: new Date().toISOString(),
-        paymentAmount: selectedClass.price || 0,
-        paymentMethod: 'cash',
-        status: 'pending',
-        paymentStatus: 'pending',
-        attendanceStatus: 'not_checked'
+        classId: selectedClass._id,
+        bookingDate: new Date().toISOString()
       };
 
       console.log('Sending booking data:', bookingData);
@@ -351,17 +345,31 @@ const Home = () => {
       const response = await bookingAPI.create(bookingData);
       console.log('Booking response:', response);
 
-      setBookingSuccess('Class booked successfully!');
-      setShowBookingDialog(false);
-      
-      await Promise.all([
-        fetchClasses(),
-        fetchUserBookings()
-      ]);
+      if (response && response.success) {
+        // First update the UI state
+        setBookingSuccess('Class booked successfully!');
+        setShowBookingDialog(false);
 
+        // Update the userBookings state immediately
+        setUserBookings(prev => ({
+          ...prev,
+          [selectedClass._id]: response.data
+        }));
+
+        // Then refresh the data
+        try {
+          await fetchClasses();
+        } catch (refreshError) {
+          console.error('Error refreshing data:', refreshError);
+          // Show a warning but don't treat it as an error since the booking was successful
+          setBookingSuccess('Class booked successfully! (Some data may need to be refreshed)');
+        }
+      } else {
+        throw new Error(response?.message || 'Failed to book class');
+      }
     } catch (error: any) {
       console.error('Booking error:', error);
-      setBookingError('Failed to book class. Please try again.');
+      setBookingError(error.message || 'Failed to book class. Please try again.');
     } finally {
       setBookingLoading(false);
     }
