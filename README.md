@@ -16,7 +16,7 @@ A yoga studio management system built with React, Node.js, and MongoDB.
 npm install
 ```
 
-3. Run the frontend:
+ Run the frontend:
 ```bash
 npm run dev
 ```
@@ -29,12 +29,13 @@ cd backend
 npm install
 ```
 
-3. Start MongoDB:
+2. Start MongoDB:
 ```bash
 # Windows
 net start MongoDB
+```
 
-4. Run the backend:
+3. Run the backend:
 ```bash
 npm start
 ```
