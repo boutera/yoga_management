@@ -151,7 +151,7 @@ const ClassDetails = () => {
               Price
             </Typography>
             <Typography variant="body1">
-              ${classData.price.toFixed(2)}
+              £{classData.price.toFixed(2)}
             </Typography>
           </Grid>
 

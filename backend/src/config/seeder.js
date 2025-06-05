@@ -10,32 +10,37 @@ require('dotenv').config();
 // Sample data
 const users = [
   {
-    name: 'Admin User',
+    firstName: 'Admin',
+    lastName: 'User',
     email: 'admin@yoga.com',
     password: 'admin123',
     role: 'admin',
     isActive: true
   },
   {
-    name: 'John Doe',
+    firstName: 'John',
+    lastName: 'Doe',
     email: 'john@example.com',
     password: 'user123',
     role: 'user'
   },
   {
-    name: 'Jane Smith',
+    firstName: 'Jane',
+    lastName: 'Smith',
     email: 'jane@example.com',
     password: 'user123',
     role: 'user'
   },
   {
-    name: 'Mike Johnson',
+    firstName: 'Mike',
+    lastName: 'Johnson',
     email: 'mike@example.com',
     password: 'user123',
     role: 'user'
   },
   {
-    name: 'Sarah Wilson',
+    firstName: 'Sarah',
+    lastName: 'Wilson',
     email: 'sarah@example.com',
     password: 'user123',
     role: 'user'
@@ -45,13 +50,7 @@ const users = [
 const locations = [
   {
     name: 'Downtown Studio',
-    address: {
-      street: '123 Main St',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10001',
-      country: 'USA'
-    },
+    address: '123 Main St, New York, NY 10001, USA',
     capacity: 30,
     contactEmail: 'downtown@yoga.com',
     contactPhone: '212-555-0101',
@@ -70,13 +69,7 @@ const locations = [
   },
   {
     name: 'Uptown Studio',
-    address: {
-      street: '456 Park Ave',
-      city: 'New York',
-      state: 'NY',
-      zipCode: '10022',
-      country: 'USA'
-    },
+    address: '456 Park Ave, New York, NY 10022, USA',
     capacity: 25,
     contactEmail: 'uptown@yoga.com',
     contactPhone: '212-555-0202',
@@ -95,13 +88,7 @@ const locations = [
   },
   {
     name: 'Brooklyn Studio',
-    address: {
-      street: '789 Atlantic Ave',
-      city: 'Brooklyn',
-      state: 'NY',
-      zipCode: '11238',
-      country: 'USA'
-    },
+    address: '789 Atlantic Ave, Brooklyn, NY 11238, USA',
     capacity: 35,
     contactEmail: 'brooklyn@yoga.com',
     contactPhone: '718-555-0303',
@@ -122,49 +109,100 @@ const locations = [
 
 const tutors = [
   {
+    firstName: 'Sarah',
+    lastName: 'Smith',
     name: 'Sarah Smith',
     email: 'sarah@yoga.com',
-    phone: '212-555-0303',
-    specialties: ['Hatha', 'Vinyasa'],
-    experience: 5,
-    bio: 'Certified yoga instructor with 5 years of experience',
-    status: 'active'
+    phone: '212-555-0102',
+    specialties: ['Hatha Yoga', 'Vinyasa Flow', 'Meditation'],
+    experience: 8,
+    bio: 'Certified yoga instructor with 8 years of experience in various styles.',
+    status: 'active',
+    certifications: [
+      {
+        name: 'RYT 500',
+        issuer: 'Yoga Alliance',
+        year: 2015
+      },
+      {
+        name: 'Meditation Teacher',
+        issuer: 'Mindfulness Institute',
+        year: 2018
+      }
+    ],
+    availability: {
+      monday: [{ start: '09:00', end: '17:00' }],
+      tuesday: [{ start: '09:00', end: '17:00' }],
+      wednesday: [{ start: '09:00', end: '17:00' }],
+      thursday: [{ start: '09:00', end: '17:00' }],
+      friday: [{ start: '09:00', end: '17:00' }]
+    },
+    rating: 4.8,
+    totalRatings: 156
   },
   {
+    firstName: 'Michael',
+    lastName: 'Chen',
     name: 'Michael Chen',
     email: 'michael@yoga.com',
-    phone: '212-555-0404',
-    specialties: ['Ashtanga', 'Power Yoga'],
-    experience: 8,
-    bio: 'Senior instructor specializing in advanced practices',
-    status: 'active'
-  },
-  {
-    name: 'Emma Davis',
-    email: 'emma@yoga.com',
-    phone: '212-555-0505',
-    specialties: ['Yin', 'Restorative'],
-    experience: 6,
-    bio: 'Specialized in therapeutic and restorative yoga practices',
-    status: 'active'
-  },
-  {
-    name: 'David Wilson',
-    email: 'david@yoga.com',
-    phone: '212-555-0606',
-    specialties: ['Hot Yoga', 'Bikram'],
+    phone: '212-555-0103',
+    specialties: ['Ashtanga Yoga', 'Power Yoga', 'Yoga Therapy'],
     experience: 10,
-    bio: 'Expert in hot yoga with international teaching experience',
-    status: 'active'
+    bio: 'Experienced yoga therapist specializing in injury prevention and recovery.',
+    status: 'active',
+    certifications: [
+      {
+        name: 'RYT 500',
+        issuer: 'Yoga Alliance',
+        year: 2013
+      },
+      {
+        name: 'Yoga Therapy',
+        issuer: 'International Association of Yoga Therapists',
+        year: 2016
+      }
+    ],
+    availability: {
+      monday: [{ start: '08:00', end: '16:00' }],
+      tuesday: [{ start: '08:00', end: '16:00' }],
+      wednesday: [{ start: '08:00', end: '16:00' }],
+      thursday: [{ start: '08:00', end: '16:00' }],
+      friday: [{ start: '08:00', end: '16:00' }]
+    },
+    rating: 4.9,
+    totalRatings: 203
   },
   {
-    name: 'Lisa Brown',
-    email: 'lisa@yoga.com',
-    phone: '212-555-0707',
-    specialties: ['Prenatal', 'Gentle Yoga'],
-    experience: 7,
-    bio: 'Specialized in prenatal and gentle yoga for all levels',
-    status: 'active'
+    firstName: 'Emma',
+    lastName: 'Wilson',
+    name: 'Emma Wilson',
+    email: 'emma@yoga.com',
+    phone: '212-555-0104',
+    specialties: ['Yin Yoga', 'Restorative Yoga', 'Prenatal Yoga'],
+    experience: 6,
+    bio: 'Specialized in gentle and therapeutic yoga styles for all levels.',
+    status: 'active',
+    certifications: [
+      {
+        name: 'RYT 200',
+        issuer: 'Yoga Alliance',
+        year: 2017
+      },
+      {
+        name: 'Prenatal Yoga',
+        issuer: 'Prenatal Yoga Center',
+        year: 2018
+      }
+    ],
+    availability: {
+      monday: [{ start: '10:00', end: '18:00' }],
+      tuesday: [{ start: '10:00', end: '18:00' }],
+      wednesday: [{ start: '10:00', end: '18:00' }],
+      thursday: [{ start: '10:00', end: '18:00' }],
+      friday: [{ start: '10:00', end: '18:00' }]
+    },
+    rating: 4.7,
+    totalRatings: 128
   }
 ];
 

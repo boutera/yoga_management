@@ -342,7 +342,7 @@ const ClassForm = () => {
                 required
                 inputProps={{ min: 0, step: 0.01 }}
                 InputProps={{
-                  startAdornment: '$',
+                  startAdornment: '£',
                 }}
                 disabled={loading}
                 InputLabelProps={{ shrink: true }}

@@ -463,7 +463,7 @@ const ClassesList = () => {
                 <Divider sx={{ my: 2 }} />
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="h6" color="primary">
-                    ${cls.price}
+                    £{cls.price}
                   </Typography>
                   {userBookings[cls._id] ? (
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -598,7 +598,7 @@ const ClassesList = () => {
                   Total Price
                 </Typography>
                 <Typography variant="h5" color="primary.main" sx={{ fontWeight: 600 }}>
-                  ${selectedClass.price}
+                  £{selectedClass.price}
                 </Typography>
               </Box>
 

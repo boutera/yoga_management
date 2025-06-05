@@ -405,7 +405,7 @@ const Home = () => {
         image: `/images/classes/${cls.category?.toLowerCase() || 'default'}.jpg`,
         duration: `${cls.duration || 60} min`,
         level: cls.level || 'All Levels',
-        price: `$${cls.price || 0}`,
+        price: `£${cls.price || 0}`,
         tutor: cls.tutor?.name,
       }))
     : staticFeaturedClasses;
@@ -738,7 +738,7 @@ const Home = () => {
                           <Divider sx={{ my: 2 }} />
                           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="h6" color="primary">
-                              ${cls.price}
+                              £{cls.price}
                             </Typography>
                             {userBookings[cls._id] ? (
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -1020,7 +1020,7 @@ const Home = () => {
                   Total Price
                 </Typography>
                 <Typography variant="h5" color="primary.main" sx={{ fontWeight: 600 }}>
-                  ${selectedClass.price}
+                  £{selectedClass.price}
                 </Typography>
               </Box>
 

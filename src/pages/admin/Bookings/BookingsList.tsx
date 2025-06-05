@@ -373,7 +373,7 @@ const BookingsList = () => {
       align: 'right' as const,
       render: (row: Booking) => (
         <Typography variant="body2">
-          ${row.paymentAmount}
+          £{row.paymentAmount}
         </Typography>
       ),
     },

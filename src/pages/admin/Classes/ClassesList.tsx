@@ -148,7 +148,7 @@ const ClassesList = () => {
       label: 'Price',
       minWidth: 100,
       align: 'right' as const,
-      format: (value: number) => `$${value.toFixed(2)}`,
+      format: (value: number) => `£${value.toFixed(2)}`,
     },
     {
       id: 'status',
