@@ -323,7 +323,10 @@ exports.updateBookingStatus = async (req, res) => {
 // Get user's bookings
 exports.getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user.id })
+    const bookings = await Booking.find({ 
+      user: req.user.id,
+      status: { $in: ['pending', 'confirmed'] } // Only get active bookings
+    })
       .populate({
         path: 'class',
         populate: [
