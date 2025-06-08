@@ -372,7 +372,7 @@ const destroyData = async () => {
 // Generate random bookings
 const generateBookings = (users, classes) => {
   const bookings = [];
-  const statuses = ['confirmed', 'completed', 'cancelled', 'no-show'];
+  const statuses = ['confirmed', 'rejected', 'no-show'];
   const paymentMethods = ['cash', 'credit_card', 'debit_card', 'online_transfer'];
   const attendanceStatuses = ['present', 'absent', 'not_checked'];
 
@@ -393,14 +393,14 @@ const generateBookings = (users, classes) => {
       class: classData._id,
       bookingDate,
       status,
-      paymentStatus: status === 'cancelled' ? 'refunded' : 'paid',
+      paymentStatus: status === 'rejected' ? 'refunded' : 'paid',
       paymentAmount: classData.price,
       paymentMethod,
       attendanceStatus,
-      notes: status === 'cancelled' ? 'Cancelled due to schedule conflict' : undefined,
-      cancellationReason: status === 'cancelled' ? 'Schedule conflict' : undefined,
-      cancellationDate: status === 'cancelled' ? bookingDate : undefined,
-      refundAmount: status === 'cancelled' ? classData.price : undefined
+      notes: status === 'rejected' ? 'Rejected due to schedule conflict' : undefined,
+      cancellationReason: status === 'rejected' ? 'Schedule conflict' : undefined,
+      cancellationDate: status === 'rejected' ? bookingDate : undefined,
+      refundAmount: status === 'rejected' ? classData.price : undefined
     });
   }
 

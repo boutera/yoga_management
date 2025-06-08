@@ -134,6 +134,7 @@ const ClassesList = () => {
           acc[booking.class._id] = booking;
           return acc;
         }, {});
+        console.log('User bookings:', bookingsMap);
         setUserBookings(bookingsMap);
       }
     } catch (err) {
@@ -174,7 +175,6 @@ const ClassesList = () => {
       console.log('Booking response:', response);
 
       if (response && response.success) {
-        // First update the UI state
         setBookingSuccess('Class booked successfully!');
         setShowBookingDialog(false);
 
@@ -187,6 +187,7 @@ const ClassesList = () => {
         // Then refresh the data
         try {
           await fetchClasses();
+          await fetchUserBookings(); // Also refresh the bookings
         } catch (refreshError) {
           console.error('Error refreshing data:', refreshError);
           // Show a warning but don't treat it as an error since the booking was successful

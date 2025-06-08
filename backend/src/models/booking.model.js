@@ -13,7 +13,7 @@ const bookingSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'confirmed', 'cancelled', 'completed', 'no-show'],
+    enum: ['pending', 'confirmed', 'rejected', 'completed', 'no-show'],
     default: 'pending'
   },
   bookingDate: {
@@ -89,7 +89,7 @@ bookingSchema.methods.cancelBooking = async function(reason) {
     throw new Error('Booking cannot be cancelled less than 24 hours before class');
   }
 
-  this.status = 'cancelled';
+  this.status = 'rejected';
   this.cancellationReason = reason;
   this.cancellationDate = new Date();
   this.refundAmount = this.paymentAmount;

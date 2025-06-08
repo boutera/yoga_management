@@ -62,7 +62,7 @@ interface Booking {
       address: string;
     };
   };
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed' | 'no-show';
+  status: 'pending' | 'confirmed' | 'rejected' | 'completed' | 'no-show';
   bookingDate: string;
   paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
   paymentAmount: number;
@@ -216,7 +216,7 @@ const BookingsList = () => {
     if (!selectedBooking) return;
 
     try {
-      const response = await bookingAPI.updateStatus(selectedBooking._id, 'cancelled');
+      const response = await bookingAPI.updateStatus(selectedBooking._id, 'rejected');
       if (!response.success) {
         throw new Error('Failed to reject booking');
       }
@@ -256,7 +256,7 @@ const BookingsList = () => {
         return 'info';
       case 'completed':
         return 'success';
-      case 'cancelled':
+      case 'rejected':
       case 'no-show':
         return 'error';
       default:
@@ -472,8 +472,7 @@ const BookingsList = () => {
             <MenuItem value="all">All Status</MenuItem>
             <MenuItem value="confirmed">Confirmed</MenuItem>
             <MenuItem value="pending">Pending</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
-            <MenuItem value="completed">Completed</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
           </Select>
         </FormControl>
       </Box>

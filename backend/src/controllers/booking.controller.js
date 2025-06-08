@@ -236,7 +236,7 @@ exports.updateBookingStatus = async (req, res) => {
     }
 
     // For admin cancellations or other status updates
-    if (status === 'cancelled') {
+    if (status === 'rejected') {
       // Get the class to update its bookedCount
       const classData = await Class.findById(booking.class);
       if (classData) {
@@ -247,7 +247,7 @@ exports.updateBookingStatus = async (req, res) => {
         );
       }
 
-      booking.status = 'cancelled';
+      booking.status = 'rejected';
       booking.cancellationReason = cancellationReason;
       booking.cancellationDate = new Date();
       booking.paymentStatus = 'refunded';
@@ -263,8 +263,8 @@ exports.updateBookingStatus = async (req, res) => {
         const userNotification = new Notification({
           recipient: booking.user._id,
           type: 'warning',
-          title: 'Booking Cancelled',
-          message: `Your booking for ${booking.class.name} has been cancelled.${cancellationReason ? ` Reason: ${cancellationReason}` : ''}`,
+          title: 'Booking Rejected',
+          message: `Your booking for ${booking.class.name} has been rejected.${cancellationReason ? ` Reason: ${cancellationReason}` : ''}`,
           link: `/bookings/${booking._id}`
         });
         await userNotification.save();
@@ -323,9 +323,10 @@ exports.updateBookingStatus = async (req, res) => {
 // Get user's bookings
 exports.getUserBookings = async (req, res) => {
   try {
+    console.log('Fetching bookings for user:', req.user.id);
     const bookings = await Booking.find({ 
       user: req.user.id,
-      status: { $in: ['pending', 'confirmed'] } // Only get active bookings
+      status: { $in: ['pending', 'confirmed', 'rejected'] } // Include rejected status
     })
       .populate({
         path: 'class',
@@ -336,11 +337,18 @@ exports.getUserBookings = async (req, res) => {
       })
       .sort({ bookingDate: -1 });
 
+    console.log('Found bookings:', bookings.map(b => ({ 
+      id: b._id, 
+      status: b.status, 
+      class: b.class._id 
+    })));
+
     res.json({
       success: true,
       data: bookings
     });
   } catch (error) {
+    console.error('Error fetching user bookings:', error);
     res.status(500).json({
       success: false,
       message: 'Error fetching user bookings',

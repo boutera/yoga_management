@@ -180,7 +180,18 @@ export const tutorAPI = {
 export const bookingAPI = {
   getAll: () => api.get('/bookings').then(response => response.data),
   getById: (id: string) => api.get(`/bookings/${id}`).then(response => response.data),
-  create: (data: any) => api.post('/bookings', data).then(response => response.data),
+  create: (data: { classId: string; bookingDate: string }) => {
+    console.log('Creating booking with data:', data);
+    return api.post('/bookings', data)
+      .then(response => {
+        console.log('Booking creation response:', response);
+        return response.data;
+      })
+      .catch(error => {
+        console.error('Booking creation error:', error.response?.data || error);
+        throw error;
+      });
+  },
   update: (id: string, data: any) => api.put(`/bookings/${id}`, data).then(response => response.data),
   delete: (id: string) => api.delete(`/bookings/${id}`).then(response => response.data),
   getUserBookings: () => api.get('/bookings/user/bookings').then(response => response.data),
