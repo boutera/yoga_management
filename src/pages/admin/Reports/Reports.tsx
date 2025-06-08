@@ -342,7 +342,7 @@ const Reports = () => {
       <Grid item xs={12} md={6}>
         <Paper sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Class Distribution
+            Booking Distribution by Tutor
           </Typography>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
@@ -367,7 +367,7 @@ const Reports = () => {
       <Grid item xs={12} md={6}>
         <Paper sx={{ p: 2 }}>
           <Typography variant="h6" gutterBottom>
-            Tutor Performance
+            Tutor Distribution by Class
           </Typography>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
@@ -382,7 +382,7 @@ const Reports = () => {
               <YAxis />
               <Tooltip />
               <Legend />
-              <Bar dataKey="count" fill="#82ca9d" name="Students" />
+              <Bar dataKey="count" fill="#82ca9d" name="Classes" />
             </BarChart>
           </ResponsiveContainer>
         </Paper>
