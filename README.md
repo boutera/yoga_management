@@ -51,3 +51,9 @@ npm start
 
 - Email: admin@example.com
 - Password: admin123
+
+  # Database configuration:
+
+  - After installing MongoDB
+  - open MongoDB compass and create a  new connection and call it : yoga_management
+  - create a database named yoga
