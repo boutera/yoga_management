@@ -34,8 +34,11 @@ npm install
 # Windows
 net start MongoDB
 ```
-
-3. Run the backend:
+3. Run thi command to initialize the database with initial data:
+```bash
+npm run seed
+```
+4. Run the backend:
 ```bash
 npm start
 ```
