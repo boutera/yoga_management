@@ -372,7 +372,7 @@ const destroyData = async () => {
 // Generate random bookings
 const generateBookings = (users, classes) => {
   const bookings = [];
-  const statuses = ['confirmed', 'rejected', 'no-show'];
+  const statuses = ['confirmed', 'rejected'];
   const paymentMethods = ['cash', 'credit_card', 'debit_card', 'online_transfer'];
   const attendanceStatuses = ['present', 'absent', 'not_checked'];
 
